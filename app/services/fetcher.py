@@ -155,7 +155,10 @@ async def _fetch_with_client(
                         )
 
                 encoding = response.encoding or "utf-8"
-                html = buffer.decode(encoding, errors="replace")
+                try:
+                    html = buffer.decode(encoding, errors="replace")
+                except LookupError:
+                    html = buffer.decode("utf-8", errors="replace")
 
                 return FetchedPage(
                     final_url=target.url,

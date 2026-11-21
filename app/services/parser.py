@@ -16,6 +16,23 @@ NOISE_TAGS = ("script", "style", "noscript", "svg", "iframe", "template", "canva
 MAX_HEADINGS = 30
 WHITESPACE_RE = re.compile(r"\s+")
 
+
+def _repair_unclosed_title(html: str) -> str:
+    """Close an unclosed <title> tag before </head> so parsing can recover the body."""
+    pattern = re.compile(
+        r"(<title\b[^>]*>)(.*?)(?=</head\s*>)",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    def repair(match: re.Match[str]) -> str:
+        title_content = match.group(2)
+        if re.search(r"</title\s*>", title_content, re.IGNORECASE):
+            return match.group(0)
+        return f"{match.group(1)}{title_content}</title>"
+
+    return pattern.sub(repair, html, count=1)
+
+
 # Use the bundled Mozilla Public Suffix List offline (no network fetches or disk cache).
 _PSL_EXTRACTOR = tldextract.TLDExtract(
     suffix_list_urls=(),
@@ -76,7 +93,7 @@ def _get_canonical_url(soup: BeautifulSoup, base_url: str) -> str | None:
             try:
                 candidate = urljoin(base_url, href.strip())
                 parsed = urlsplit(candidate)
-                _ = parsed.port  # Trigger validation for malformed port syntax.
+                _ = parsed.port
             except ValueError:
                 continue
             if parsed.scheme.lower() in {"http", "https"} and parsed.hostname:
@@ -117,7 +134,6 @@ def _registered_domain_key(hostname: str) -> tuple[str, ...]:
     if not cleaned:
         return ()
 
-    # Literal IP addresses have no subdomain hierarchy; compare by canonical IP.
     candidate_ip = (
         cleaned[1:-1] if cleaned.startswith("[") and cleaned.endswith("]") else cleaned
     )
@@ -135,7 +151,6 @@ def _registered_domain_key(hostname: str) -> tuple[str, ...]:
         registered = f"{extracted.domain}.{extracted.suffix}"
         return tuple(label for label in registered.split(".") if label)
 
-    # Unrecognized suffix: compare the complete normalized hostname.
     return tuple(label for label in normalized_host.split(".") if label)
 
 
@@ -163,12 +178,14 @@ def _count_links(soup: BeautifulSoup, base_url: str) -> tuple[int, int]:
         if not isinstance(href, str):
             continue
         href = href.strip()
-        if not href or href.lower().startswith(("#", "mailto:", "tel:", "javascript:")):
+        if not href or href.lower().startswith(
+            ("#", "mailto:", "tel:", "javascript:")
+        ):
             continue
 
         try:
             resolved = urlsplit(urljoin(base_url, href))
-            _ = resolved.port  # Trigger validation for malformed port syntax.
+            _ = resolved.port
         except ValueError:
             continue
 
@@ -236,11 +253,15 @@ def parse_html_content(
     if not html or not html.strip():
         raise ContentExtractionError("Fetched HTML document is empty.")
 
+    # Repair an unclosed title before parsing so body content is not swallowed.
+    html = _repair_unclosed_title(html)
     soup = BeautifulSoup(html, "html.parser")
 
     # Extract metadata and technical SEO signals before stripping non-content elements.
     title = _clean_text(soup.title.get_text(separator=" ")) if soup.title else None
-    meta_description = _get_meta_content(soup, attr_name="name", attr_value="description")
+    meta_description = _get_meta_content(
+        soup, attr_name="name", attr_value="description"
+    )
     canonical_url = _get_canonical_url(soup, final_url)
     og_title = _get_meta_content(soup, attr_name="property", attr_value="og:title")
     og_description = _get_meta_content(
@@ -265,8 +286,9 @@ def parse_html_content(
         )
 
     if not body_text:
-        # Fallback to title/headings only if the page contains minimal textual markup.
-        fallback_parts = [part for part in [title, meta_description, *headings] if part]
+        fallback_parts = [
+            part for part in [title, meta_description, *headings] if part
+        ]
         body_text = _truncate_text(" ".join(fallback_parts), max_text_chars)
 
     seo_signals = SEOSignals(
