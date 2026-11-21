@@ -1,0 +1,52 @@
+# Environment files and secrets (never include in Docker build context)
+.env
+.env.*
+*.pem
+*.key
+
+# Python virtual environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Tests and repository documentation (not required in runtime image)
+tests/
+README.md
+Dockerfile
+.dockerignore
+
+# Version control and CI metadata
+.git/
+.gitignore
+.github/
+
+# IDE and OS local artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log
+
+# Non-backend repository files
+node_modules/
+dist/
+build/
+coverage/
+src/
+index.html
+package.json
+package-lock.json
+bun.lock
+tsconfig.json
+vite.config.ts
+metadata.json
