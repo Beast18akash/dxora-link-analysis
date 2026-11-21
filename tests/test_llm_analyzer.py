@@ -14,7 +14,15 @@ from pydantic import SecretStr
 
 from app.config import Settings
 from app.exceptions import LLMServiceError
-from app.schemas import ExtractedWebsiteContent, LLMAnalysisResult, SEOSignals
+from app.schemas import (
+    CompetitorSourceType,
+    ExtractedWebsiteContent,
+    GeographicalFocusBasis,
+    LLMAnalysisResult,
+    SEOSignals,
+    SearchPlatform,
+    ServiceSourceType,
+)
 from app.services.llm_analyzer import analyze_website_content
 
 
@@ -56,62 +64,189 @@ def _valid_analysis_dict() -> dict:
     """Return a valid five-section analysis response."""
     return {
         "competitor_vs_brand_details": {
-            "brand_name": "Dxora Technologies",
-            "brand_positioning": (
-                "Backend and cloud engineering consultancy focused "
-                "on FastAPI and data pipelines."
-            ),
-            "mentioned_competitors": [],
-            "differentiation_notes": (
-                "No competitors are named on the page; competitor "
-                "comparisons cannot be verified from page content alone."
+            "your_brand": {
+                "brand_name": "Dxora Technologies",
+                "business_overview": (
+                    "Backend and cloud engineering consultancy building "
+                    "FastAPI backends, cloud infrastructure, and data pipelines."
+                ),
+                "main_business_category": "Cloud & Backend Software Engineering Consultancy",
+                "main_products_and_services": [
+                    "FastAPI Backend Development",
+                    "Cloud Infrastructure",
+                    "Data Pipelines",
+                ],
+            },
+            "competitors": [
+                {
+                    "name": "Example Cloud Consultancy",
+                    "overview": (
+                        "General cloud and API engineering consultancy "
+                        "(unverified AI-generated suggestion)."
+                    ),
+                    "strengths": [],
+                    "weaknesses_or_gaps": [],
+                    "source_type": "ai_generated_suggestion",
+                    "is_verified": False,
+                    "verification_note": (
+                        "AI-generated suggestion (unverified): inferred from the "
+                        "brand's category; not mentioned on the submitted website. "
+                        "No strengths or weaknesses are claimed without verifiable evidence."
+                    ),
+                }
+            ],
+            "competitive_advantages": [
+                "Extracted fact: explicit specialization in Python FastAPI backends, "
+                "cloud infrastructure, and data pipelines."
+            ],
+            "positioning_opportunities": [
+                "Suggestion: publish case studies and measurable client outcomes "
+                "to clarify differentiation against competing consultancies."
+            ],
+            "grounding_notes": (
+                "Brand details and services are extracted directly from the submitted "
+                "website. No competitors were named on the page, so the listed "
+                "competitor is clearly labeled as an unverified AI-generated suggestion."
             ),
         },
         "top_5_target_search_queries": [
             {
                 "query": "FastAPI backend engineering consulting",
-                "intent": "commercial",
-                "rationale": (
+                "platforms": ["Google", "LinkedIn"],
+                "search_intent": "commercial",
+                "business_relevance": (
                     "Directly aligns with FastAPI backend offerings "
                     "described in body text."
                 ),
-            }
-        ],
-        "seo_improvements": [
+                "target_audience": "CTOs and backend engineering managers evaluating vendors",
+            },
             {
-                "area": "Image Alt Text",
-                "observation": (
-                    "1 of 2 extracted images is missing descriptive alt text."
+                "query": "cloud infrastructure architecture best practices",
+                "platforms": ["Google", "X", "LinkedIn"],
+                "search_intent": "informational",
+                "business_relevance": (
+                    "Attracts technical decision-makers researching cloud infrastructure "
+                    "services highlighted on the site."
                 ),
-                "recommendation": (
-                    "Add concise, descriptive alt text to the remaining image."
+                "target_audience": "DevOps leads and cloud architects",
+            },
+            {
+                "query": "custom data pipeline consulting services",
+                "platforms": ["Google", "Facebook", "Instagram"],
+                "search_intent": "transactional",
+                "business_relevance": (
+                    "Targets businesses actively seeking data pipeline engineering "
+                    "support mentioned on the page."
                 ),
-            }
+                "target_audience": "Data engineering leaders and SaaS founders",
+            },
         ],
+        "seo_improvements": {
+            "primary_keyword": "FastAPI backend engineering consulting",
+            "secondary_keywords": [
+                "cloud infrastructure consulting",
+                "Python API development",
+                "data pipeline engineering",
+            ],
+            "long_tail_keywords": [
+                "custom FastAPI backend development for cloud platforms",
+                "scalable cloud infrastructure and data pipeline consulting",
+            ],
+            "business_keywords": [
+                "backend engineering consultancy",
+                "cloud engineering partner",
+                "API engineering services",
+            ],
+            "recommended_seo_title": (
+                "FastAPI Backend Engineering Consulting & Cloud Infrastructure | Dxora Technologies"
+            ),
+            "primary_keyword_integration": (
+                "Place the primary keyword near the start of the title tag and H1 heading, "
+                "reinforce it naturally in the opening paragraph and meta description, and "
+                "link to a dedicated FastAPI consulting service page."
+            ),
+            "recommended_meta_description": (
+                "Dxora Technologies delivers FastAPI backend engineering consulting, "
+                "scalable cloud infrastructure, and reliable data pipelines for modern teams."
+            ),
+            "supporting_content_recommendations": [
+                "Publish dedicated service landing pages for FastAPI APIs, cloud infrastructure, and data pipelines.",
+                "Add technical case studies and an architecture FAQ addressing common cloud migration questions.",
+            ],
+            "technical_seo_improvements": [
+                {
+                    "area": "Image Alt Text",
+                    "observation": (
+                        "1 of 2 extracted images is missing descriptive alt text."
+                    ),
+                    "recommendation": (
+                        "Add concise, descriptive alt text to the remaining image."
+                    ),
+                }
+            ],
+        },
         "top_5_services": [
             {
                 "name": "FastAPI Backend Development",
                 "description": (
                     "Custom Python FastAPI backend systems described on the page."
                 ),
+                "target_industry": "Technology and SaaS",
+                "target_customer": "VP of Engineering and product engineering teams",
+                "main_benefit": "Reliable, maintainable asynchronous API backends.",
+                "source_type": "extracted_from_website",
+                "is_explicitly_listed": True,
+                "source_note": "Extracted directly from the website body copy.",
             },
             {
                 "name": "Cloud Infrastructure & Data Pipelines",
                 "description": (
                     "Cloud architecture and data pipeline engineering."
                 ),
+                "target_industry": "Data-driven enterprises and software companies",
+                "target_customer": "Cloud architects and data engineering leaders",
+                "main_benefit": "Scalable cloud foundations and dependable data flows.",
+                "source_type": "extracted_from_website",
+                "is_explicitly_listed": True,
+                "source_note": "Extracted directly from the website body copy.",
             },
         ],
         "target_audience_identification": {
-            "primary_segments": [
+            "primary_audiences": [
                 "Engineering leaders and technology companies"
             ],
-            "pain_points_addressed": [
+            "secondary_audiences": [
+                "Technical startup founders seeking fractional backend architecture support"
+            ],
+            "industry_segments": [
+                "Software & SaaS",
+                "Cloud-native technology enterprises",
+            ],
+            "business_types": [
+                "B2B technology startups",
+                "Mid-market software organizations",
+            ],
+            "customer_profiles": [
+                "CTOs and VPs of Engineering scaling Python APIs and cloud workloads",
+                "Data platform managers modernizing ingestion and processing pipelines",
+            ],
+            "geographical_focus": "Not specified on website",
+            "geographical_focus_basis": "not_specified",
+            "customer_needs_and_challenges": [
                 "Building reliable cloud APIs and scalable data pipelines"
             ],
+            "customer_interests": [
+                "FastAPI backend performance",
+                "Cloud infrastructure reliability",
+                "Automated data pipeline engineering",
+            ],
+            "marketing_audience_recommendations": [
+                "Target engineering leaders on LinkedIn with technical architecture insights.",
+                "Capture high-intent Google search traffic with dedicated FastAPI and cloud service pages.",
+            ],
             "audience_signals": (
-                "Technical positioning around FastAPI backends "
-                "and cloud infrastructure."
+                "Extracted facts: copy emphasizes FastAPI backends, cloud infrastructure, "
+                "and data pipelines. Inference: B2B technical leadership buyer personas."
             ),
         },
     }
@@ -155,8 +290,22 @@ class TestAnalyzeWebsiteContent:
         )
 
         assert isinstance(result, LLMAnalysisResult)
-        assert result.competitor_vs_brand_details.brand_name == "Dxora Technologies"
-        assert result.competitor_vs_brand_details.mentioned_competitors == []
+        section_1 = result.competitor_vs_brand_details
+        assert section_1.your_brand.brand_name == "Dxora Technologies"
+        assert (
+            section_1.your_brand.main_business_category
+            == "Cloud & Backend Software Engineering Consultancy"
+        )
+        assert "FastAPI Backend Development" in section_1.your_brand.main_products_and_services
+        assert len(section_1.competitors) == 1
+        assert (
+            section_1.competitors[0].source_type
+            == CompetitorSourceType.AI_GENERATED_SUGGESTION
+        )
+        assert section_1.competitors[0].is_verified is False
+        assert len(section_1.competitive_advantages) == 1
+        assert len(section_1.positioning_opportunities) == 1
+        assert "unverified" in section_1.grounding_notes.lower()
         assert len(result.top_5_services) == 2
 
         # An injected client must not be closed by the analyzer.
@@ -168,7 +317,10 @@ class TestAnalyzeWebsiteContent:
         assert call_kwargs["model"] == "gemini-3.5-flash-lite"
         assert "<website_content>" in call_kwargs["input"]
         assert "images_missing_alt" in call_kwargs["input"]
-        assert call_kwargs["system_instruction"]
+        assert "competitor_vs_brand_details" in call_kwargs["input"]
+        assert "ai_generated_suggestion" in call_kwargs["input"]
+        assert "do not invent" in call_kwargs["system_instruction"].lower()
+        assert "market share" in call_kwargs["system_instruction"].lower()
         assert call_kwargs["response_format"]["mime_type"] == "application/json"
         assert call_kwargs["store"] is False
         assert call_kwargs["timeout"] > 0
@@ -192,8 +344,15 @@ class TestAnalyzeWebsiteContent:
             client=client,
         )
 
-        assert result.competitor_vs_brand_details.brand_name == "Dxora Technologies"
-        assert len(result.seo_improvements) == 1
+        assert (
+            result.competitor_vs_brand_details.your_brand.brand_name
+            == "Dxora Technologies"
+        )
+        assert (
+            result.seo_improvements.primary_keyword
+            == "FastAPI backend engineering consulting"
+        )
+        assert len(result.seo_improvements.technical_seo_improvements) == 1
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -437,7 +596,16 @@ class TestAnalyzeWebsiteContent:
     ) -> None:
         too_many_services = _valid_analysis_dict()
         too_many_services["top_5_services"] = [
-            {"name": f"Service {i}", "description": "Desc"}
+            {
+                "name": f"Service {i}",
+                "description": "Desc",
+                "target_industry": "Technology",
+                "target_customer": "Engineering teams",
+                "main_benefit": "Improved delivery speed",
+                "source_type": "extracted_from_website",
+                "is_explicitly_listed": True,
+                "source_note": "Extracted from website.",
+            }
             for i in range(6)
         ]
 
@@ -486,7 +654,7 @@ class TestAnalyzeWebsiteContent:
             )
 
             assert (
-                result.competitor_vs_brand_details.brand_name
+                result.competitor_vs_brand_details.your_brand.brand_name
                 == "Dxora Technologies"
             )
 
@@ -519,3 +687,640 @@ class TestAnalyzeWebsiteContent:
                 )
 
             failing_client.aio.aclose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_section_1_accepts_verified_and_unverified_competitors_and_fewer_than_three(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = [
+            {
+                "name": "Named Rival Corp",
+                "overview": "Explicitly compared on the submitted page.",
+                "strengths": ["Broad enterprise footprint mentioned on page"],
+                "weaknesses_or_gaps": ["Slower delivery cycle mentioned on page"],
+                "source_type": "verified",
+                "is_verified": True,
+                "verification_note": "Verified: explicitly named on the submitted website.",
+            },
+            {
+                "name": "Suggested Peer LLC",
+                "overview": "Unverified category peer offering cloud API engineering.",
+                "strengths": [],
+                "weaknesses_or_gaps": [],
+                "source_type": "ai_generated_suggestion",
+                "is_verified": False,
+                "verification_note": (
+                    "AI-generated suggestion (unverified): not named on the website; "
+                    "no strengths or weaknesses claimed without supporting evidence."
+                ),
+            },
+        ]
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+
+        competitors = result.competitor_vs_brand_details.competitors
+        assert len(competitors) == 2
+        assert competitors[0].source_type == CompetitorSourceType.VERIFIED
+        assert competitors[0].is_verified is True
+        assert (
+            competitors[1].source_type
+            == CompetitorSourceType.AI_GENERATED_SUGGESTION
+        )
+        assert competitors[1].is_verified is False
+        assert competitors[1].strengths == []
+        assert competitors[1].weaknesses_or_gaps == []
+
+    @pytest.mark.asyncio
+    async def test_section_1_allows_empty_competitors_when_unverifiable(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = []
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+
+        assert result.competitor_vs_brand_details.competitors == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("source_type", "is_verified"),
+        [
+            ("ai_generated_suggestion", True),
+            ("verified", False),
+            ("unrecognized_status", False),
+        ],
+    )
+    async def test_section_1_rejects_inconsistent_or_invalid_competitor_verification(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        source_type: str,
+        is_verified: bool,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = [
+            {
+                "name": "Example Rival",
+                "overview": "Cloud consulting provider.",
+                "strengths": ["Cloud expertise"],
+                "weaknesses_or_gaps": [],
+                "source_type": source_type,
+                "is_verified": is_verified,
+                "verification_note": "Test verification note.",
+            }
+        ]
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_1_rejects_blank_brand_name(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["your_brand"]["brand_name"] = "   "
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    def test_interactions_response_format_schema_compatibility(self) -> None:
+        schema = LLMAnalysisResult.model_json_schema()
+        defs = schema.get("$defs", {})
+
+        for expected_def in (
+            "CompetitorVsBrandDetails",
+            "BrandProfile",
+            "CompetitorDetail",
+            "CompetitorSourceType",
+            "SearchPlatform",
+            "TargetSearchQuery",
+            "SEOImprovementsSection",
+            "SEOImprovement",
+            "ServiceSourceType",
+            "ServiceItem",
+            "GeographicalFocusBasis",
+            "TargetAudienceIdentification",
+        ):
+            assert expected_def in defs
+
+        # Enums must emit standard JSON Schema string enums.
+        assert defs["CompetitorSourceType"]["type"] == "string"
+        assert set(defs["CompetitorSourceType"]["enum"]) == {
+            "verified",
+            "ai_generated_suggestion",
+        }
+        assert defs["SearchPlatform"]["type"] == "string"
+        assert set(defs["SearchPlatform"]["enum"]) == {
+            "Google",
+            "Facebook",
+            "Instagram",
+            "LinkedIn",
+            "X",
+        }
+        assert defs["ServiceSourceType"]["type"] == "string"
+        assert set(defs["ServiceSourceType"]["enum"]) == {
+            "extracted_from_website",
+            "inferred_recommendation",
+        }
+        assert defs["GeographicalFocusBasis"]["type"] == "string"
+        assert set(defs["GeographicalFocusBasis"]["enum"]) == {
+            "explicitly_stated",
+            "inferred",
+            "not_specified",
+        }
+
+        # Recursively verify every $ref node has no sibling keys and no anyOf/oneOf unions exist.
+        def _walk_schema(node: object) -> None:
+            if isinstance(node, dict):
+                assert "anyOf" not in node
+                assert "oneOf" not in node
+                if "$ref" in node:
+                    assert set(node.keys()) == {"$ref"}, f"Sibling keys on $ref: {node}"
+                for value in node.values():
+                    _walk_schema(value)
+            elif isinstance(node, list):
+                for item in node:
+                    _walk_schema(item)
+
+        _walk_schema(schema)
+
+        # Competitors list must NOT enforce minItems=3 so the model is never forced
+        # to invent competitors when reliable information is unavailable.
+        section_1_def = defs["CompetitorVsBrandDetails"]
+        section_1_props = section_1_def["properties"]
+        assert "minItems" not in section_1_props["competitors"]
+        expected_section_1_keys = {
+            "your_brand",
+            "competitors",
+            "competitive_advantages",
+            "positioning_opportunities",
+            "grounding_notes",
+        }
+        assert expected_section_1_keys == set(section_1_props.keys())
+        assert expected_section_1_keys == set(section_1_def["required"])
+
+    @pytest.mark.asyncio
+    async def test_competitor_verification_prompt_rules(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        expected = LLMAnalysisResult.model_validate(_valid_analysis_dict())
+        interaction_mock = AsyncMock(
+            return_value=_interaction_response(expected.model_dump_json())
+        )
+        client = _make_mock_client(interaction_mock)
+
+        await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+
+        call_kwargs = interaction_mock.await_args.kwargs
+        system_lower = call_kwargs["system_instruction"].lower()
+        input_lower = call_kwargs["input"].lower()
+
+        assert "or reliable verifiable facts" not in system_lower
+        assert "submitted\n       website content explicitly supports" in system_lower
+        assert "general model knowledge must always use" in system_lower
+        assert "is_verified=false" in system_lower
+        assert "strengths=[]" in system_lower
+        assert "weaknesses_or_gaps=[]" in system_lower
+        assert "fabricate competitor\n       strengths, weaknesses, or factual claims" in system_lower
+
+        assert "only when <website_content> explicitly supports it" in input_lower
+        assert "never based on general model knowledge" in input_lower
+        assert "source_type='ai_generated_suggestion', is_verified=false" in input_lower
+        assert "strengths=[], weaknesses_or_gaps=[]" in input_lower
+        assert "fabricate competitor strengths, weaknesses" in input_lower
+        assert "/en-in" in input_lower
+
+        # Verify Sections 2–5 prompt coverage.
+        for expected_phrase in (
+            "google, facebook, instagram, linkedin",
+            "never invent search volumes",
+            "primary_keyword",
+            "recommended_seo_title",
+            "recommended_meta_description",
+            "extracted_from_website",
+            "inferred_recommendation",
+            "geographical_focus",
+            "geographical_focus_basis",
+            "/en-in",
+            "not specified on website",
+            "marketing_audience_recommendations",
+        ):
+            assert expected_phrase in system_lower
+
+    @pytest.mark.asyncio
+    async def test_section_2_supports_all_five_platforms_and_rejects_unknown_platform(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["top_5_target_search_queries"] = [
+            {
+                "query": "FastAPI cloud engineering",
+                "platforms": ["Google", "Facebook", "Instagram", "LinkedIn", "X"],
+                "search_intent": "commercial",
+                "business_relevance": "Directly reflects the core offerings.",
+                "target_audience": "Engineering leaders",
+            }
+        ]
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+        assert result.top_5_target_search_queries[0].platforms == [
+            SearchPlatform.GOOGLE,
+            SearchPlatform.FACEBOOK,
+            SearchPlatform.INSTAGRAM,
+            SearchPlatform.LINKEDIN,
+            SearchPlatform.X,
+        ]
+
+        bad_payload = _valid_analysis_dict()
+        bad_payload["top_5_target_search_queries"][0]["platforms"] = ["TikTok"]
+        bad_client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=bad_client,
+            )
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_3_validates_all_seo_fields_and_rejects_blank_primary_keyword(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+        seo = result.seo_improvements
+        assert seo.primary_keyword == "FastAPI backend engineering consulting"
+        assert len(seo.secondary_keywords) >= 1
+        assert len(seo.long_tail_keywords) >= 1
+        assert len(seo.business_keywords) >= 1
+        assert "FastAPI" in seo.recommended_seo_title
+        assert seo.primary_keyword_integration
+        assert seo.recommended_meta_description
+        assert len(seo.supporting_content_recommendations) >= 1
+        assert len(seo.technical_seo_improvements) == 1
+
+        bad_payload = _valid_analysis_dict()
+        bad_payload["seo_improvements"]["primary_keyword"] = "   "
+        bad_client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=bad_client,
+            )
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_4_distinguishes_extracted_and_inferred_services(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["top_5_services"].append(
+            {
+                "name": "API Security & Performance Audits",
+                "description": "Recommended adjacent audit offering aligned with backend work.",
+                "target_industry": "Technology and SaaS",
+                "target_customer": "Security-conscious engineering teams",
+                "main_benefit": "Identifies reliability and security bottlenecks early.",
+                "source_type": "inferred_recommendation",
+                "is_explicitly_listed": False,
+                "source_note": "Inferred recommendation: not explicitly listed on the submitted page.",
+            }
+        )
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+        assert len(result.top_5_services) == 3
+        assert (
+            result.top_5_services[0].source_type
+            == ServiceSourceType.EXTRACTED_FROM_WEBSITE
+        )
+        assert result.top_5_services[0].is_explicitly_listed is True
+        assert (
+            result.top_5_services[2].source_type
+            == ServiceSourceType.INFERRED_RECOMMENDATION
+        )
+        assert result.top_5_services[2].is_explicitly_listed is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("source_type", "is_explicitly_listed"),
+        [
+            ("inferred_recommendation", True),
+            ("extracted_from_website", False),
+            ("unknown_source", True),
+        ],
+    )
+    async def test_section_4_rejects_inconsistent_service_source_classification(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        source_type: str,
+        is_explicitly_listed: bool,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["top_5_services"][0]["source_type"] = source_type
+        payload["top_5_services"][0]["is_explicitly_listed"] = is_explicitly_listed
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_5_validates_complete_target_audience_profile(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["target_audience_identification"]["secondary_audiences"] = []
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+        audience = result.target_audience_identification
+        assert len(audience.primary_audiences) >= 1
+        assert audience.secondary_audiences == []
+        assert len(audience.industry_segments) >= 1
+        assert len(audience.business_types) >= 1
+        assert len(audience.customer_profiles) >= 1
+        assert audience.geographical_focus == "Not specified on website"
+        assert len(audience.customer_needs_and_challenges) >= 1
+        assert len(audience.customer_interests) >= 1
+        assert len(audience.marketing_audience_recommendations) >= 1
+
+        bad_payload = _valid_analysis_dict()
+        bad_payload["target_audience_identification"]["geographical_focus"] = "   "
+        bad_client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=bad_client,
+            )
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("strengths", "weaknesses_or_gaps"),
+        [
+            (["Unsupported claimed strength"], []),
+            ([], ["Unsupported claimed weakness"]),
+            (["Claimed strength"], ["Claimed weakness"]),
+        ],
+    )
+    async def test_section_1_rejects_unverified_competitor_with_strengths_or_weaknesses(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        strengths: list[str],
+        weaknesses_or_gaps: list[str],
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = [
+            {
+                "name": "Suggested Peer LLC",
+                "overview": "Unverified AI-generated category peer.",
+                "strengths": strengths,
+                "weaknesses_or_gaps": weaknesses_or_gaps,
+                "source_type": "ai_generated_suggestion",
+                "is_verified": False,
+                "verification_note": "AI-generated suggestion (unverified): not on website.",
+            }
+        ]
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_1_allows_verified_competitor_with_or_without_strengths_and_weaknesses(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = [
+            {
+                "name": "Verified Rival A",
+                "overview": "Explicitly compared on the submitted page.",
+                "strengths": ["Broad global footprint mentioned on page"],
+                "weaknesses_or_gaps": ["Higher onboarding complexity noted on page"],
+                "source_type": "verified",
+                "is_verified": True,
+                "verification_note": "Verified from comparison table on submitted website.",
+            },
+            {
+                "name": "Verified Rival B",
+                "overview": "Named on the submitted page without detailed comparison.",
+                "strengths": [],
+                "weaknesses_or_gaps": [],
+                "source_type": "verified",
+                "is_verified": True,
+                "verification_note": "Verified: named on the submitted website; no strengths/weaknesses stated.",
+            },
+        ]
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+
+        competitors = result.competitor_vs_brand_details.competitors
+        assert len(competitors) == 2
+        assert competitors[0].strengths == ["Broad global footprint mentioned on page"]
+        assert competitors[1].strengths == []
+        assert competitors[1].weaknesses_or_gaps == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("geo_focus", "geo_basis", "expected_enum"),
+        [
+            (
+                "United States and Canada (explicitly stated on website)",
+                "explicitly_stated",
+                GeographicalFocusBasis.EXPLICITLY_STATED,
+            ),
+            (
+                "Inferred: India (localized URL '/en-in' suggests an Indian regional audience, not proof of exclusive targeting)",
+                "inferred",
+                GeographicalFocusBasis.INFERRED,
+            ),
+            (
+                "Not specified on website",
+                "not_specified",
+                GeographicalFocusBasis.NOT_SPECIFIED,
+            ),
+        ],
+    )
+    async def test_section_5_distinguishes_explicit_inferred_and_not_specified_geographical_focus(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        geo_focus: str,
+        geo_basis: str,
+        expected_enum: GeographicalFocusBasis,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["target_audience_identification"]["geographical_focus"] = geo_focus
+        payload["target_audience_identification"]["geographical_focus_basis"] = geo_basis
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        result = await analyze_website_content(
+            sample_content,
+            valid_settings,
+            client=client,
+        )
+
+        audience = result.target_audience_identification
+        assert audience.geographical_focus == geo_focus
+        assert audience.geographical_focus_basis == expected_enum
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("geo_focus", "geo_basis"),
+        [
+            ("India", "inferred"),
+            ("Not specified on website", "explicitly_stated"),
+            ("Not specified on website", "inferred"),
+            ("India", "not_specified"),
+            ("Global", "invalid_basis"),
+        ],
+    )
+    async def test_section_5_rejects_inconsistent_geographical_focus_and_basis(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        geo_focus: str,
+        geo_basis: str,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["target_audience_identification"]["geographical_focus"] = geo_focus
+        payload["target_audience_identification"]["geographical_focus_basis"] = geo_basis
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"

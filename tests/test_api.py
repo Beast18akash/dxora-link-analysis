@@ -37,34 +37,99 @@ def _build_valid_analysis() -> LLMAnalysisResult:
     return LLMAnalysisResult.model_validate(
         {
             "competitor_vs_brand_details": {
-                "brand_name": "Dxora Technologies",
-                "brand_positioning": "Cloud engineering and API consulting provider.",
-                "mentioned_competitors": [],
-                "differentiation_notes": "No competitors are named on the page; comparisons cannot be verified from page content alone.",
+                "your_brand": {
+                    "brand_name": "Dxora Technologies",
+                    "business_overview": "Cloud engineering and API consulting provider.",
+                    "main_business_category": "Cloud & API Engineering Consultancy",
+                    "main_products_and_services": [
+                        "FastAPI API Engineering",
+                        "Cloud-Native Platforms",
+                    ],
+                },
+                "competitors": [
+                    {
+                        "name": "Example Cloud Peer",
+                        "overview": "Unverified AI-generated category peer offering API consulting.",
+                        "strengths": [],
+                        "weaknesses_or_gaps": [],
+                        "source_type": "ai_generated_suggestion",
+                        "is_verified": False,
+                        "verification_note": (
+                            "AI-generated suggestion (unverified): not named on the submitted website; "
+                            "no strengths or weaknesses claimed without supporting evidence."
+                        ),
+                    }
+                ],
+                "competitive_advantages": [
+                    "Extracted fact: focused expertise in FastAPI APIs and cloud-native platforms."
+                ],
+                "positioning_opportunities": [
+                    "Suggestion: publish detailed case studies to strengthen market differentiation."
+                ],
+                "grounding_notes": (
+                    "Brand details are extracted from the website; no competitors were named on the "
+                    "page, so listed competitors are labeled as unverified AI-generated suggestions."
+                ),
             },
             "top_5_target_search_queries": [
                 {
                     "query": "FastAPI cloud engineering consulting",
-                    "intent": "commercial",
-                    "rationale": "Matches the stated API and cloud platform offerings.",
+                    "platforms": ["Google", "LinkedIn"],
+                    "search_intent": "commercial",
+                    "business_relevance": "Matches the stated API and cloud platform offerings.",
+                    "target_audience": "Software engineering leaders",
                 }
             ],
-            "seo_improvements": [
-                {
-                    "area": "Content Depth",
-                    "observation": "Homepage body copy is brief.",
-                    "recommendation": "Add detailed service descriptions and case studies.",
-                }
-            ],
+            "seo_improvements": {
+                "primary_keyword": "FastAPI API engineering consulting",
+                "secondary_keywords": ["cloud-native platform engineering", "Python API consulting"],
+                "long_tail_keywords": ["custom FastAPI backend development for cloud platforms"],
+                "business_keywords": ["API engineering consultancy", "cloud engineering services"],
+                "recommended_seo_title": "FastAPI API Engineering & Cloud Platforms | Dxora Technologies",
+                "primary_keyword_integration": (
+                    "Include the primary keyword in the title tag, H1 heading, meta description, "
+                    "and opening service overview paragraph."
+                ),
+                "recommended_meta_description": (
+                    "Dxora Technologies builds FastAPI APIs and cloud-native platforms for modern "
+                    "software engineering teams."
+                ),
+                "supporting_content_recommendations": [
+                    "Publish detailed service pages and architecture case studies."
+                ],
+                "technical_seo_improvements": [
+                    {
+                        "area": "Content Depth",
+                        "observation": "Homepage body copy is brief.",
+                        "recommendation": "Add detailed service descriptions and case studies.",
+                    }
+                ],
+            },
             "top_5_services": [
                 {
                     "name": "FastAPI API Engineering",
                     "description": "Design and delivery of FastAPI backend services.",
+                    "target_industry": "Technology and SaaS",
+                    "target_customer": "Software engineering teams",
+                    "main_benefit": "Reliable, maintainable asynchronous API platforms.",
+                    "source_type": "extracted_from_website",
+                    "is_explicitly_listed": True,
+                    "source_note": "Extracted directly from the submitted homepage.",
                 }
             ],
             "target_audience_identification": {
-                "primary_segments": ["Software engineering teams"],
-                "pain_points_addressed": ["Building reliable cloud-native APIs"],
+                "primary_audiences": ["Software engineering teams"],
+                "secondary_audiences": ["Technical startup founders"],
+                "industry_segments": ["Software & Cloud Technology"],
+                "business_types": ["B2B SaaS startups", "Mid-market technology companies"],
+                "customer_profiles": ["Engineering managers and cloud architects"],
+                "geographical_focus": "Not specified on website",
+                "geographical_focus_basis": "not_specified",
+                "customer_needs_and_challenges": ["Building reliable cloud-native APIs"],
+                "customer_interests": ["FastAPI architecture", "Cloud-native scalability"],
+                "marketing_audience_recommendations": [
+                    "Run technical thought-leadership campaigns on LinkedIn targeting engineering leaders."
+                ],
                 "audience_signals": "Copy focuses on API engineering and cloud platforms.",
             },
         }
@@ -153,6 +218,34 @@ class TestLinkAnalysisEndpoint:
             "top_5_services",
             "target_audience_identification",
         }
+        section_1 = body["analysis"]["competitor_vs_brand_details"]
+        assert section_1["your_brand"]["brand_name"] == "Dxora Technologies"
+        assert section_1["competitors"][0]["source_type"] == "ai_generated_suggestion"
+        assert section_1["competitors"][0]["is_verified"] is False
+        assert section_1["competitors"][0]["strengths"] == []
+        assert section_1["competitors"][0]["weaknesses_or_gaps"] == []
+        assert len(section_1["competitive_advantages"]) == 1
+        assert len(section_1["positioning_opportunities"]) == 1
+        assert body["analysis"]["top_5_target_search_queries"][0]["platforms"] == [
+            "Google",
+            "LinkedIn",
+        ]
+        assert (
+            body["analysis"]["seo_improvements"]["primary_keyword"]
+            == "FastAPI API engineering consulting"
+        )
+        assert (
+            body["analysis"]["top_5_services"][0]["source_type"]
+            == "extracted_from_website"
+        )
+        assert (
+            body["analysis"]["target_audience_identification"]["geographical_focus"]
+            == "Not specified on website"
+        )
+        assert (
+            body["analysis"]["target_audience_identification"]["geographical_focus_basis"]
+            == "not_specified"
+        )
 
     @pytest.mark.parametrize(
         "payload",
