@@ -43,17 +43,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @application.exception_handler(RequestValidationError)
     async def handle_validation_error(
         _request: Request,
-        exc: RequestValidationError,
+        _exc: RequestValidationError,
     ) -> JSONResponse:
-        errors = exc.errors()
-        first_message = (
-            str(errors[0].get("msg", "Invalid request payload."))
-            if errors
-            else "Invalid request payload."
-        )
         payload = ErrorResponse(
             error_code="VALIDATION_ERROR",
-            message=f"Request validation failed: {first_message}",
+            message="Request validation failed. Please check the submitted data.",
         )
         return JSONResponse(status_code=422, content=payload.model_dump())
 

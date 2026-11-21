@@ -22,7 +22,7 @@ Given a single public `http` or `https` URL, the API:
 
 ## Features
 
-The features below are implemented in the current backend codebase and covered by offline automated unit and API tests (using mocked DNS, HTTP transport, and Gemini clients). Live integration verification against external HTTPS websites and the live Google Gemini API remains a separate manual step:
+The features below are implemented in the current backend codebase, covered by **188 offline automated unit and API tests** (using mocked DNS, HTTP transport, and Gemini Interactions API clients), and validated with manual live API testing:
 
 - **Website URL Analysis (`POST /link-analysis`)**: End-to-end async pipeline returning extracted page metadata alongside structured AI insights.
 
@@ -32,15 +32,15 @@ The features below are implemented in the current backend codebase and covered b
 
 - **DNS Rebinding Mitigation**: Pins outbound `httpx` requests to the validated resolved IP while preserving the original HTTP `Host` header and HTTPS TLS SNI (`sni_hostname`) without disabling TLS certificate verification.
 
-- **Safe Asynchronous Fetching**: Uses `httpx.AsyncClient` with `trust_env=False`, per-request `follow_redirects=False`, manual hop-by-hop redirect validation, configurable timeouts, strict HTML `Content-Type` allowlisting (`text/html`, `application/xhtml+xml`), and `Content-Length` + streaming byte limits.
+- **Safe Asynchronous Fetching**: Uses `httpx.AsyncClient` with `trust_env=False`, per-request `follow_redirects=False`, manual hop-by-hop redirect validation, configurable timeouts, strict HTML `Content-Type` allowlisting (`text/html`, `application/xhtml+xml`), UTF-8 fallback for unrecognized response encodings, and `Content-Length` + streaming byte limits.
 
-- **HTML Cleaning & On-Page SEO Extraction**: Uses `BeautifulSoup` (`html.parser`) to strip `script`, `style`, `noscript`, `svg`, `iframe`, `template`, and `canvas` elements, extract `<title>`, meta description, valid HTTP(S) canonical URLs, Open Graph tags, deduplicated `H1`–`H3` headings (capped at 30), image alt-text counts, and word-boundary-truncated body text.
+- **HTML Cleaning & On-Page SEO Extraction**: Uses `BeautifulSoup` (`html.parser`) with unclosed `<title>` repair to strip `script`, `style`, `noscript`, `svg`, `iframe`, `template`, and `canvas` elements, extract `<title>`, meta description, valid HTTP(S) canonical URLs, Open Graph tags, deduplicated `H1`–`H3` headings (capped at 30), image alt-text counts, and word-boundary-truncated body text.
 
 - **Public Suffix List Link Classification**: Classifies internal vs. external links using `tldextract` configured completely offline (`suffix_list_urls=()`, `cache_dir=None`, `fallback_to_snapshot=True`, `include_psl_private_domains=True`) with IDNA Unicode/Punycode normalization.
 
-- **Structured Google Gemini Analysis**: Uses the official `google-genai` async SDK (`client.aio.models.generate_content`) with `response_schema=LLMAnalysisResult`, grounding prompts against fabricated competitor data, search volumes, pricing, or benchmarks, and validating every response strictly through Pydantic.
+- **Structured Google Gemini Analysis**: Uses the official `google-genai` async SDK **Interactions API** (`client.aio.interactions.create`) with a JSON schema `response_format` (`LLMAnalysisResult.model_json_schema()`) and `store=False`, reads structured JSON from `response.output_text`, grounds prompts against fabricated competitor data, search volumes, pricing, or benchmarks, and validates every response strictly through Pydantic.
 
-- **Consistent Error Handling & Input Validation**: Centralized domain exceptions mapped to consistent JSON `ErrorResponse` payloads with meaningful HTTP status codes and sanitized messages.
+- **Consistent Error Handling & Input Validation**: Centralized domain exceptions and generic safe `RequestValidationError` handling mapped to consistent JSON `ErrorResponse` payloads with meaningful HTTP status codes and sanitized messages.
 
 ---
 
@@ -58,7 +58,7 @@ The features below are implemented in the current backend codebase and covered b
 
 - **HTML Parsing & Domain Classification**: BeautifulSoup4 (`>=4.12.0,<5.0.0`) & `tldextract` (`>=5.1.0,<6.0.0`)
 
-- **LLM SDK**: Official Google Gen AI Python SDK (`google-genai>=1.0.0,<2.0.0`)
+- **LLM SDK**: Official Google Gen AI Python SDK (`google-genai>=2.3.0,<3.0.0`, using the Interactions API)
 
 - **Testing**: `pytest` (`>=8.3.0,<9.0.0`) & `pytest-asyncio` (`>=0.24.0,<1.0.0`)
 
@@ -74,7 +74,7 @@ URL Submission (POST /link-analysis)
   -> DNS Resolution (validate_and_resolve_url: off-loop DNS + all-IP public check)
   -> Secure Website Fetching (fetch_website_html: IP pinning, SNI, manual redirects, size/type caps)
   -> HTML Parsing & SEO Extraction (parse_html_content: BeautifulSoup + offline PSL link analysis)
-  -> Gemini Analysis (analyze_website_content: async google-genai + Pydantic structured output)
+  -> Gemini Analysis (analyze_website_content: async google-genai Interactions API + Pydantic structured output)
   -> Structured JSON Response (LinkAnalysisResponse)
 ```
 
@@ -90,7 +90,7 @@ URL Submission (POST /link-analysis)
 | `app/services/security.py` | Syntactic URL checks, IDNA Punycode normalization, IPv4/IPv6/transition-address classification, and non-blocking DNS resolution via `asyncio.to_thread`. |
 | `app/services/fetcher.py` | Async `httpx` streaming fetcher with IP pinning, `Host`/TLS SNI preservation, manual redirect re-validation, `trust_env=False`, content-type allowlisting, and byte limits. |
 | `app/services/parser.py` | `BeautifulSoup` metadata/SEO extraction, noise removal, word-boundary truncation, and offline Mozilla PSL + IDNA internal/external link classification. |
-| `app/services/llm_analyzer.py` | Async `google-genai` integration, grounding system instructions, dual timeout enforcement (`HttpOptions` in ms + `asyncio.wait_for`), strict Pydantic output validation, error sanitization, and async client cleanup. |
+| `app/services/llm_analyzer.py` | Async `google-genai` Interactions API integration (`client.aio.interactions.create`, `store=False`), grounding system instructions, dual timeout enforcement (Interactions API `timeout` + `asyncio.wait_for`, default `60.0s`), `response.output_text` Pydantic JSON validation, sanitized error mapping, and async client cleanup. |
 
 ---
 
@@ -183,7 +183,7 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set a valid `GEMINI_API_KEY` and a `GEMINI_MODEL` ID supported by your Gemini API account (replacing the `REPLACE_WITH_SUPPORTED_MODEL_ID` placeholder). Never commit `.env` to version control.
+Edit `.env` and set a valid `GEMINI_API_KEY` (replacing the `your_gemini_api_key_here` placeholder). `.env.example` already configures the default `GEMINI_MODEL=gemini-3.5-flash-lite`, which you can keep or change to another model ID supported by your Gemini API account. Never commit `.env` to version control.
 
 ### 5. Start the Application
 
@@ -202,7 +202,7 @@ All configuration settings are loaded by `app/config.py` from environment variab
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | Yes (for `/link-analysis`) | `None` | Google Gemini API key stored internally as Pydantic `SecretStr`. Missing or placeholder values return HTTP `503` (`LLM_NOT_CONFIGURED`). |
-| `GEMINI_MODEL` | Recommended | `gemini-4-hydrogen` (in `app/config.py`) | Gemini model ID used for structured analysis. In `app/config.py`, `gemini_model` defaults to `gemini-4-hydrogen` when unset, whereas `.env.example` sets the placeholder `REPLACE_WITH_SUPPORTED_MODEL_ID` (which is rejected with HTTP `503` / `LLM_NOT_CONFIGURED`). Set this explicitly to a model ID supported by your Gemini API account. |
+| `GEMINI_MODEL` | Optional | `gemini-3.5-flash-lite` | Gemini model ID used for Interactions API structured analysis. Both `app/config.py` and `.env.example` default to `gemini-3.5-flash-lite`; empty values or the placeholder `REPLACE_WITH_SUPPORTED_MODEL_ID` are rejected with HTTP `503` (`LLM_NOT_CONFIGURED`). |
 | `APP_NAME` | No | `AI-Powered Website Link Analysis API` | Service title exposed in OpenAPI metadata and `/health`. |
 | `APP_VERSION` | No | `1.0.0` | Service version exposed in OpenAPI metadata and `/health`. |
 | `HTTP_TIMEOUT_SECONDS` | No | `10.0` | Timeout in seconds (`0 < x <= 60`) for fetching target websites. |
@@ -330,7 +330,7 @@ pytest -v
 
 ### Automated Test Coverage
 
-The test suite includes **187 automated unit and API tests** across five modules:
+The test suite includes **188 automated unit and API tests** across five modules:
 
 - `tests/test_security.py` (88 tests): URL syntax, schemes, credentials, local domains, IPv4/IPv6/transition IP filtering, DNS errors, IDNA Punycode normalization, malformed IPv6 & zone identifiers, and DNS rebinding scenarios.
 
@@ -338,11 +338,13 @@ The test suite includes **187 automated unit and API tests** across five modules
 
 - `tests/test_parser.py` (22 tests): Metadata, SEO signals, noise stripping, heading caps, text truncation/validation, malformed HTML, invalid canonical URLs, IDNA links, and offline `tldextract` PSL behavior.
 
-- `tests/test_llm_analyzer.py` (26 tests): Mocked async `google-genai` responses (`.parsed` and JSON `.text` fallback), missing/placeholder configuration, timeouts, sanitized `APIError` mapping, empty/malformed/invalid payloads, and owned vs. injected client cleanup.
+- `tests/test_llm_analyzer.py` (27 tests): Mocked async `google-genai` Interactions API (`client.aio.interactions.create`) responses parsed from `response.output_text`, missing/placeholder configuration, timeouts, sanitized `APIError` mapping (including `429`, `401`/`403`, `404`, `503`, `504`, and `500`), empty/malformed/invalid JSON payloads, and owned vs. injected client cleanup.
 
 - `tests/test_api.py` (22 tests): FastAPI `TestClient` integration tests for `GET /health`, `POST /link-analysis`, validation errors, domain error mappings, and sanitized `500` responses using dependency overrides.
 
-> **Verification scope**: The backend functionality is implemented and verified through 187 offline automated unit and API tests using mocked DNS, HTTP transport, and Gemini clients for determinism and speed. Manual live integration verification against external HTTPS websites and the real Google Gemini API remains outstanding and should be performed with real credentials before production use.
+> **Verification scope**:
+> - **Automated offline suite**: `188 passed, 0 failed` (with one upstream Starlette `TestClient` deprecation warning) using mocked DNS, HTTP transport, and Gemini Interactions API clients for determinism and speed.
+> - **Manual live integration testing**: Verified end-to-end against external HTTPS websites and the live Google Gemini API. Accessible websites (including Microsoft) were fetched, parsed, and analyzed successfully, while sites blocking automated requests with HTTP `403` (such as Shopify) were handled cleanly with a structured `UPSTREAM_HTTP_ERROR` (`502`) response.
 
 ---
 
@@ -363,10 +365,10 @@ All API errors return a consistent JSON envelope defined by `ErrorResponse`:
 | `403` | `SSRF_BLOCKED` | Local/internal hostname or restricted/private/loopback/link-local/CGNAT/scoped IP address (initial URL or redirect target). |
 | `413` | `RESPONSE_TOO_LARGE` | Target HTML exceeds `MAX_HTML_BYTES` via `Content-Length` or streamed bytes. |
 | `415` | `UNSUPPORTED_CONTENT_TYPE` | Missing or non-HTML `Content-Type` header. |
-| `422` | `VALIDATION_ERROR`, `CONTENT_EXTRACTION_ERROR` | Invalid request JSON body, or fetched HTML contains no readable text. |
+| `422` | `VALIDATION_ERROR`, `CONTENT_EXTRACTION_ERROR` | Invalid request JSON body (returns a generic safe validation message), or fetched HTML contains no readable text. |
 | `500` | `INTERNAL_SERVER_ERROR` | Unexpected server error (stack traces and secrets are never returned to clients). |
-| `502` | `DNS_RESOLUTION_FAILED`, `WEBSITE_CONNECTION_ERROR`, `UPSTREAM_HTTP_ERROR`, `TOO_MANY_REDIRECTS`, `WEBSITE_FETCH_ERROR`, `LLM_AUTH_ERROR`, `LLM_MODEL_UNAVAILABLE`, `LLM_API_ERROR`, `LLM_EMPTY_RESPONSE`, `LLM_INVALID_RESPONSE`, `LLM_SERVICE_ERROR` | Upstream website failure or Gemini API error/invalid output. |
-| `503` | `LLM_NOT_CONFIGURED`, `LLM_RATE_LIMITED` | Missing/placeholder `GEMINI_API_KEY` or `GEMINI_MODEL`, or Gemini API rate limiting (`429`). |
+| `502` | `DNS_RESOLUTION_FAILED`, `WEBSITE_CONNECTION_ERROR`, `UPSTREAM_HTTP_ERROR`, `TOO_MANY_REDIRECTS`, `WEBSITE_FETCH_ERROR`, `LLM_AUTH_ERROR`, `LLM_MODEL_UNAVAILABLE`, `LLM_API_ERROR`, `LLM_EMPTY_RESPONSE`, `LLM_INVALID_RESPONSE`, `LLM_SERVICE_ERROR` | Upstream website failure (including upstream HTTP `4xx`/`5xx` such as `403`) or Gemini API error/invalid output. |
+| `503` | `LLM_NOT_CONFIGURED`, `LLM_RATE_LIMITED`, `LLM_SERVICE_UNAVAILABLE` | Missing/placeholder `GEMINI_API_KEY` or `GEMINI_MODEL`, Gemini API rate limiting (`429`), or temporary Gemini service unavailability (`503`). |
 | `504` | `WEBSITE_TIMEOUT`, `LLM_TIMEOUT` | Target website fetch or Gemini API request exceeded its timeout. |
 
 ---
@@ -385,9 +387,9 @@ Implemented controls in the backend:
 
 - **Manual Redirect Re-Validation**: Forces `follow_redirects=False` per request and re-runs URL/DNS/IP validation on every `Location` header up to `MAX_REDIRECTS`.
 
-- **Network Path & Resource Limits**: Disables environment proxy inheritance (`trust_env=False`) on managed `httpx` clients, enforces HTML `Content-Type` allowlisting, streaming byte caps (`MAX_HTML_BYTES`), fetch timeouts (`HTTP_TIMEOUT_SECONDS`), and LLM request deadlines (`HttpOptions` + `asyncio.wait_for`).
+- **Network Path & Resource Limits**: Disables environment proxy inheritance (`trust_env=False`) on managed `httpx` clients, enforces HTML `Content-Type` allowlisting, streaming byte caps (`MAX_HTML_BYTES`), fetch timeouts (`HTTP_TIMEOUT_SECONDS`), and LLM request deadlines (Interactions API `timeout` + `asyncio.wait_for`, default `60.0s`).
 
-- **Secret Handling & Prompt Separation**: Stores `GEMINI_API_KEY` as `SecretStr`, sanitizes upstream Gemini error messages so keys and internal details are never returned to clients, and delimits untrusted website data in `<website_content>` tags.
+- **Secret Handling, Safe Errors & Prompt Separation**: Stores `GEMINI_API_KEY` as `SecretStr`, disables server-side interaction storage (`store=False`), returns generic safe messages for validation and unexpected errors, sanitizes upstream Gemini error messages and validation logs so keys and internal details are never returned to clients, and delimits untrusted website data in `<website_content>` tags.
 
 **Security scope limitations (not currently implemented)**:
 
@@ -466,7 +468,7 @@ The `Dockerfile` runs as a non-root user (`appuser`), listens on `0.0.0.0:${PORT
 
 - **API Authentication & Rate Limiting**: Add API key or bearer-token auth and per-IP/per-client rate limiting before public exposure.
 
-- **Configurable LLM Timeout Setting**: Expose `LLM_TIMEOUT_SECONDS` in `app/config.py` (currently fixed at `30.0s` default in `llm_analyzer.py`).
+- **Configurable LLM Timeout Setting**: Expose `LLM_TIMEOUT_SECONDS` in `app/config.py` (currently fixed at `60.0s` default in `llm_analyzer.py`).
 
 - **Response Caching**: Add short-TTL caching (e.g., Redis) keyed by normalized URL to reduce repeated fetches and LLM token costs.
 
