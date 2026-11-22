@@ -384,11 +384,11 @@ async def analyze_website_content(
     str(exc),
 )
 
-        raise LLMServiceError(
-            "AI analysis service failed to process the request.",
-            status_code=502,
-            error_code="LLM_SERVICE_ERROR",
-        ) from exc
+    raise LLMServiceError(
+        "AI analysis service failed to process the request.",
+        status_code=502,
+        error_code="LLM_SERVICE_ERROR",
+    ) from exc
 
     finally:
         if owns_client:
