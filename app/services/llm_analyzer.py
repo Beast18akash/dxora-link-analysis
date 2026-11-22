@@ -378,10 +378,11 @@ async def analyze_website_content(
         raise
 
     except Exception as exc:
-        logger.warning(
-            "Unexpected error during Gemini API call: %s",
-            type(exc).__name__,
-        )
+     logger.warning(
+    "Unexpected Gemini error: %s: %s",
+    type(exc).__name__,
+    str(exc),
+)
 
         raise LLMServiceError(
             "AI analysis service failed to process the request.",
