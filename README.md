@@ -120,6 +120,7 @@ URL Submission (POST /link-analysis)
 │   ├── test_llm_analyzer.py
 │   ├── test_parser.py
 │   └── test_security.py
+├── metadata.json
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
@@ -143,8 +144,8 @@ URL Submission (POST /link-analysis)
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
-cd <repository-directory>
+git clone https://github.com/Beast18akash/dxora-link-analysis.git
+cd dxora-link-analysis
 ```
 
 ### 2. Create and Activate a Virtual Environment
@@ -431,7 +432,7 @@ curl -X POST http://localhost:4000/link-analysis \
 Install dependencies from `requirements.txt` inside your virtual environment, then run:
 
 ```bash
-pytest -v
+python -m pytest -v
 ```
 
 ### Automated Test Coverage
@@ -449,8 +450,9 @@ The test suite includes **215 automated unit and API tests** across five modules
 - `tests/test_api.py` (22 tests): FastAPI `TestClient` integration tests for `GET /health`, `POST /link-analysis`, generic safe `422` validation errors, domain error mappings, and sanitized `500` responses using dependency overrides.
 
 > **Verification scope**:
-> - **Automated offline suite**: `215 passed, 0 failed` (with one upstream Starlette `TestClient` deprecation warning) using mocked DNS, HTTP transport, and Gemini Interactions API clients for determinism and speed.
-> - **Manual live integration testing**: Earlier manual live testing verified the fetch/parse/Gemini pipeline end-to-end against external HTTPS sites (e.g., Microsoft succeeded; sites blocking automated requests with HTTP `403` such as Shopify returned structured `UPSTREAM_HTTP_ERROR` `502`). Re-running live end-to-end tests against the expanded five-section schema with a real `GEMINI_API_KEY` is recommended prior to final production deployment.
+> - **Automated offline suite (independently run locally)**: `215 passed, 0 failed` with one upstream Starlette `TestClient` deprecation warning, using mocked DNS, HTTP transport, and Gemini Interactions API clients for determinism and speed.
+> - **Manual live integration tests**: The expanded five-section analysis was successfully tested through Swagger UI against Microsoft (`HTTP 200`) and Salesforce (`HTTP 200`). Shopify returned `HTTP 502` because the target website rejected the fetch with `HTTP 403`; this is recorded as an upstream access restriction, not a successful analysis.
+> - **Performance benchmarking**: No live cross-provider latency or accuracy benchmark has been executed.
 
 ---
 
@@ -461,7 +463,7 @@ The test suite includes **215 automated unit and API tests** across five modules
 > **Evidence Distinction**:
 > - **Published provider specifications**: Pricing (per 1M tokens), context windows, and native structured JSON output capabilities are sourced directly from official provider documentation on `2026-11-21`.
 > - **Estimated performance & cost**: Per-analysis token volumes, USD costs, and expected latency ranges are analytical estimates derived from this backend's payload caps (`MAX_EXTRACTED_TEXT_CHARS=10000`) and five-section JSON schema.
-> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. Only mocked unit/API tests (`215 passed`) were run against the expanded schema; prior manual live verification tested `gemini-3.5-flash-lite` before the Sections 2–5 schema expansion.
+> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. The automated suite (`215 passed`) uses mocked DNS, HTTP transport, and Gemini clients. Separately, manual live end-to-end tests of the expanded five-section schema returned HTTP 200 for Microsoft and Salesforce; Shopify was blocked by an upstream HTTP 403.
 
 ### Model Comparison (Published Provider Specifications)
 
@@ -638,14 +640,15 @@ The `Dockerfile` runs as a non-root user (`appuser`), defaults to port `4000` wh
 
 ## Submission Readiness Checklist (Manual External Steps)
 
-The backend codebase, five-section schemas, grounding prompts, automated tests (`215 passed`), Docker configuration, and LLM research documentation are complete in this repository. The following external deliverables must be completed manually outside the code workspace before final submission:
+The backend codebase, five-section schemas, grounding prompts, automated tests, local Docker verification, live local API tests, and LLM research documentation are complete. The following items remain before final submission:
 
-- [ ] **Re-run Live End-to-End API Test**: Start the server with a real `GEMINI_API_KEY`, call `POST /link-analysis` on public websites, and confirm live responses against the updated five-section schema.
-- [ ] **Build & Smoke-Test Docker Container Locally**: Run `docker build` and `docker run --env-file .env` on a machine with Docker installed and verify `GET /health` and `POST /link-analysis`.
-- [ ] **Push to Public GitHub Repository**: Verify `.env` is excluded (`git status`) and push the finalized codebase to a public GitHub repository.
-- [ ] **Deploy Publicly & Verify `/docs`**: Deploy the container to a hosting platform (e.g., Render, Railway, Cloud Run, Fly.io) with `GEMINI_API_KEY` injected via platform secrets, and verify the live public URL and interactive `/docs`.
-- [ ] **Capture Screenshots / Logs**: Save screenshots or response logs demonstrating live API execution and `/docs`.
-- [ ] **Complete Social & Final Email Submission**: Include any required LinkedIn / Instagram verification links and send the final submission email with the GitHub repository URL, live deployment URL, and documentation.
+- [x] **Automated Test Suite**: Independently run locally with `python -m pytest -v` — `215 passed, 0 failed, 1 warning`.
+- [x] **Live Five-Section API Tests (Local)**: Microsoft and Salesforce returned HTTP `200`; Shopify returned HTTP `502` because the target site returned HTTP `403`.
+- [x] **Build & Smoke-Test Docker Container Locally**: Docker image built and container started successfully; container reported healthy status, `GET /health` returned HTTP `200`, and `/docs` loaded successfully.
+- [x] **Push to Public GitHub Repository**: Repository published at https://github.com/Beast18akash/dxora-link-analysis.
+- [ ] **Deploy Publicly & Verify `/docs`**: Deploy the container with `GEMINI_API_KEY` configured through platform secrets, then verify the public `/health`, `/docs`, and a live `POST /link-analysis` request.
+- [ ] **Capture Screenshots / Logs**: Save screenshots or response logs demonstrating the deployed API and `/docs`.
+- [ ] **Complete Social & Final Email Submission**: Complete the required LinkedIn / Instagram follows and send the final submission email with the repository URL, public deployment URL, and required details.
 
 ---
 
