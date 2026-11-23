@@ -242,11 +242,39 @@ def _parse_and_validate_response(response: object) -> LLMAnalysisResult:
         ) from exc
 
 
-def _map_api_error(exc: genai_errors.APIError) -> LLMServiceError:
+def _sanitize_upstream_message(message: object, api_key: str = "") -> str:
+    """Return a bounded upstream message without configured credentials."""
+
+    if not isinstance(message, str) or not message.strip():
+        return "No upstream error message provided."
+
+    sanitized = message.strip()
+    if api_key:
+        sanitized = sanitized.replace(api_key, "[REDACTED]")
+
+    if len(sanitized) > 500:
+        sanitized = sanitized[:500] + "..."
+
+    return sanitized
+
+
+def _map_api_error(
+    exc: genai_errors.APIError,
+    model_name: str = "",
+    api_key: str = "",
+) -> LLMServiceError:
     """Translate Gemini API errors into sanitized application exceptions."""
 
     status = getattr(exc, "code", None)
-    logger.warning("Gemini API request failed with upstream status code: %s", status)
+    upstream_message = getattr(exc, "message", None)
+    sanitized_message = _sanitize_upstream_message(upstream_message, api_key)
+
+    logger.warning(
+        "Gemini API request failed: status=%s model=%s message=%s",
+        status,
+        model_name or "unknown",
+        sanitized_message,
+    )
 
     if status == 429:
         return LLMServiceError(
@@ -290,6 +318,19 @@ def _map_api_error(exc: genai_errors.APIError) -> LLMServiceError:
     )
 
 
+def _build_retry_options() -> genai_types.HttpRetryOptions:
+    """Build bounded SDK retries for transient 503 service responses."""
+
+    return genai_types.HttpRetryOptions(
+        attempts=3,
+        initial_delay=0.25,
+        max_delay=1.0,
+        exp_base=2.0,
+        jitter=0.1,
+        http_status_codes=[503],
+    )
+
+
 async def analyze_website_content(
     content: ExtractedWebsiteContent,
     settings: Settings,
@@ -315,6 +356,7 @@ async def analyze_website_content(
 
     model_name = settings.gemini_model.strip()
     owns_client = client is None
+    api_key = ""
 
     if owns_client:
         api_key, model_name = _get_configured_credentials(settings)
@@ -322,6 +364,7 @@ async def analyze_website_content(
             api_key=api_key,
             http_options=genai_types.HttpOptions(
                 timeout=int(timeout_seconds * 1000),
+                retry_options=_build_retry_options(),
             ),
         )
     else:
@@ -344,6 +387,9 @@ async def analyze_website_content(
                     "system_instruction": SYSTEM_INSTRUCTION,
                     "response_mime_type": "application/json",
                     "response_json_schema": LLMAnalysisResult.model_json_schema(),
+                    "http_options": genai_types.HttpOptions(
+                        retry_options=_build_retry_options(),
+                    ),
                 },
             ),
             timeout=timeout_seconds,
@@ -358,7 +404,7 @@ async def analyze_website_content(
         ) from exc
 
     except genai_errors.APIError as exc:
-        raise _map_api_error(exc) from exc
+        raise _map_api_error(exc, model_name=model_name, api_key=api_key) from exc
 
     except LLMServiceError:
         raise
