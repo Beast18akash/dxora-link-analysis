@@ -17,7 +17,7 @@ from app.schemas import ExtractedWebsiteContent, LLMAnalysisResult
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LLM_TIMEOUT_SECONDS = 60.0
+DEFAULT_LLM_TIMEOUT_SECONDS = 90.0
 
 _PLACEHOLDER_MODEL_IDS = frozenset({
     "",
