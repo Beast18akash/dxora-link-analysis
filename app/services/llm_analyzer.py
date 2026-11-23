@@ -1,4 +1,4 @@
-"""Asynchronous Gemini Interactions API analyzer producing structured website insights."""
+"""Asynchronous Gemini GenerateContent analyzer producing structured website insights."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import logging
 
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 import httpx
 from pydantic import ValidationError
 
@@ -19,10 +20,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_LLM_TIMEOUT_SECONDS = 90.0
 
-_PLACEHOLDER_MODEL_IDS = frozenset({
-    "",
-    "REPLACE_WITH_SUPPORTED_MODEL_ID",
-})
+_PLACEHOLDER_MODEL_IDS = frozenset({"", "REPLACE_WITH_SUPPORTED_MODEL_ID"})
 
 _PLACEHOLDER_API_KEYS = frozenset({
     "",
@@ -217,9 +215,9 @@ def _get_configured_credentials(settings: Settings) -> tuple[str, str]:
 
 
 def _parse_and_validate_response(response: object) -> LLMAnalysisResult:
-    """Extract Interactions API output and validate it with Pydantic."""
+    """Extract GenerateContent text and validate it with Pydantic."""
 
-    raw_text = getattr(response, "output_text", None)
+    raw_text = getattr(response, "text", None)
 
     if not isinstance(raw_text, str) or not raw_text.strip():
         raise LLMServiceError(
@@ -234,7 +232,7 @@ def _parse_and_validate_response(response: object) -> LLMAnalysisResult:
     except ValidationError as exc:
         logger.warning(
             "Gemini output failed schema validation. Error count: %d",
-             len(exc.errors()),
+            len(exc.errors()),
         )
 
         raise LLMServiceError(
@@ -248,11 +246,7 @@ def _map_api_error(exc: genai_errors.APIError) -> LLMServiceError:
     """Translate Gemini API errors into sanitized application exceptions."""
 
     status = getattr(exc, "code", None)
-
-    logger.warning(
-        "Gemini API request failed with upstream status code: %s",
-        status,
-    )
+    logger.warning("Gemini API request failed with upstream status code: %s", status)
 
     if status == 429:
         return LLMServiceError(
@@ -303,7 +297,7 @@ async def analyze_website_content(
     client: genai.Client | None = None,
     timeout_seconds: float = DEFAULT_LLM_TIMEOUT_SECONDS,
 ) -> LLMAnalysisResult:
-    """Run asynchronous Gemini Interactions API analysis.
+    """Run asynchronous Gemini GenerateContent analysis.
 
     Args:
         content: Cleaned website content and SEO signals.
@@ -324,9 +318,11 @@ async def analyze_website_content(
 
     if owns_client:
         api_key, model_name = _get_configured_credentials(settings)
-
         active_client = genai.Client(
             api_key=api_key,
+            http_options=genai_types.HttpOptions(
+                timeout=int(timeout_seconds * 1000),
+            ),
         )
     else:
         if model_name in _PLACEHOLDER_MODEL_IDS:
@@ -335,36 +331,26 @@ async def analyze_website_content(
                 status_code=503,
                 error_code="LLM_NOT_CONFIGURED",
             )
-
         active_client = client
 
     prompt = _build_user_prompt(content)
 
-    response_format = {
-        "type": "text",
-        "mime_type": "application/json",
-        "schema": LLMAnalysisResult.model_json_schema(),
-    }
-
     try:
-        interaction = await asyncio.wait_for(
-            active_client.aio.interactions.create(
+        response = await asyncio.wait_for(
+            active_client.aio.models.generate_content(
                 model=model_name,
-                input=prompt,
-                system_instruction=SYSTEM_INSTRUCTION,
-                response_format=response_format,
-                store=False,
-                timeout=timeout_seconds,
+                contents=prompt,
+                config={
+                    "system_instruction": SYSTEM_INSTRUCTION,
+                    "response_mime_type": "application/json",
+                    "response_json_schema": LLMAnalysisResult.model_json_schema(),
+                },
             ),
             timeout=timeout_seconds,
         )
 
     except (TimeoutError, asyncio.TimeoutError, httpx.TimeoutException) as exc:
-        logger.warning(
-            "Gemini analysis request timed out after %.1fs.",
-            timeout_seconds,
-        )
-
+        logger.warning("Gemini analysis request timed out after %.1fs.", timeout_seconds)
         raise LLMServiceError(
             "AI analysis request timed out.",
             status_code=504,
@@ -383,7 +369,6 @@ async def analyze_website_content(
             type(exc).__name__,
             str(exc),
         )
-
         raise LLMServiceError(
             "AI analysis service failed to process the request.",
             status_code=502,
@@ -393,13 +378,10 @@ async def analyze_website_content(
     finally:
         if owns_client:
             aclose = getattr(active_client.aio, "aclose", None)
-
             if callable(aclose):
                 try:
                     await aclose()
                 except Exception:
-                    logger.debug(
-                        "Failed to close Gemini async client cleanly."
-                    )
+                    logger.debug("Failed to close Gemini async client cleanly.")
 
-    return _parse_and_validate_response(interaction)
+    return _parse_and_validate_response(response)
