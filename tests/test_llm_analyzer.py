@@ -1,9 +1,10 @@
-"""Unit tests for the asynchronous Gemini Interactions API analyzer."""
+"""Unit tests for the asynchronous Gemini GenerateContent API analyzer."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -252,23 +253,82 @@ def _valid_analysis_dict() -> dict:
     }
 
 
-def _make_mock_client(interaction_mock: AsyncMock) -> MagicMock:
-    """Create a mock Google Gen AI client with the Interactions API."""
+def _make_mock_client(generate_content_mock: AsyncMock) -> MagicMock:
+    """Create a mock Google Gen AI client with the GenerateContent API."""
     client = MagicMock()
     client.aio = MagicMock()
-    client.aio.interactions = MagicMock()
-    client.aio.interactions.create = interaction_mock
+    client.aio.models = MagicMock()
+    client.aio.models.generate_content = generate_content_mock
     client.aio.aclose = AsyncMock()
     return client
 
 
-def _interaction_response(output_text: str | None) -> SimpleNamespace:
-    """Build a mock Interactions API response."""
-    return SimpleNamespace(output_text=output_text)
+def _generate_content_response(text: str | None) -> SimpleNamespace:
+    """Build a mock GenerateContent API response."""
+    return SimpleNamespace(text=text)
 
 
 class TestAnalyzeWebsiteContent:
     """Tests for Gemini structured output, validation, errors, and cleanup."""
+
+    @pytest.mark.asyncio
+    async def test_gemini_503_uses_bounded_retry_and_safe_logging(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        upstream_message = "Sensitive upstream detail with test-synthetic-key-not-real"
+        api_error = genai_errors.APIError(
+            503,
+            {"error": {"status": "UNAVAILABLE", "message": upstream_message}},
+        )
+        client = MagicMock()
+        client.aio.models.generate_content = AsyncMock(side_effect=api_error)
+
+        with caplog.at_level(logging.WARNING, logger="app.services.llm_analyzer"):
+            with pytest.raises(LLMServiceError) as exc_info:
+                await analyze_website_content(
+                    sample_content,
+                    valid_settings,
+                    client=client,
+                )
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.error_code == "LLM_SERVICE_UNAVAILABLE"
+        assert upstream_message not in caplog.text
+        assert "status=503" in caplog.text
+        assert "model=gemini-3.5-flash-lite" in caplog.text
+        assert "reason=UNAVAILABLE" in caplog.text
+
+        request_options = client.aio.models.generate_content.await_args.kwargs[
+            "config"
+        ]["http_options"]
+        retry_options = request_options.retry_options
+        assert retry_options.attempts == 3
+        assert retry_options.http_status_codes == [503]
+
+    @pytest.mark.asyncio
+    async def test_unexpected_error_does_not_log_exception_message(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        client = MagicMock()
+        client.aio.models.generate_content = AsyncMock(
+            side_effect=RuntimeError("Sensitive upstream detail")
+        )
+
+        with caplog.at_level(logging.WARNING, logger="app.services.llm_analyzer"):
+            with pytest.raises(LLMServiceError):
+                await analyze_website_content(
+                    sample_content,
+                    valid_settings,
+                    client=client,
+                )
+
+        assert "Sensitive upstream detail" not in caplog.text
 
     @pytest.mark.asyncio
     async def test_successful_structured_response(
@@ -278,10 +338,10 @@ class TestAnalyzeWebsiteContent:
     ) -> None:
         expected = LLMAnalysisResult.model_validate(_valid_analysis_dict())
 
-        interaction_mock = AsyncMock(
-            return_value=_interaction_response(expected.model_dump_json())
+        generate_content_mock = AsyncMock(
+            return_value=_generate_content_response(expected.model_dump_json())
         )
-        client = _make_mock_client(interaction_mock)
+        client = _make_mock_client(generate_content_mock)
 
         result = await analyze_website_content(
             sample_content,
@@ -311,19 +371,21 @@ class TestAnalyzeWebsiteContent:
         # An injected client must not be closed by the analyzer.
         client.aio.aclose.assert_not_awaited()
 
-        # Verify Interactions API request arguments.
-        call_kwargs = interaction_mock.await_args.kwargs
+        # Verify GenerateContent API request arguments.
+        call_kwargs = generate_content_mock.await_args.kwargs
+        config = call_kwargs["config"]
 
         assert call_kwargs["model"] == "gemini-3.5-flash-lite"
-        assert "<website_content>" in call_kwargs["input"]
-        assert "images_missing_alt" in call_kwargs["input"]
-        assert "competitor_vs_brand_details" in call_kwargs["input"]
-        assert "ai_generated_suggestion" in call_kwargs["input"]
-        assert "do not invent" in call_kwargs["system_instruction"].lower()
-        assert "market share" in call_kwargs["system_instruction"].lower()
-        assert call_kwargs["response_format"]["mime_type"] == "application/json"
-        assert call_kwargs["store"] is False
-        assert call_kwargs["timeout"] > 0
+        assert "<website_content>" in call_kwargs["contents"]
+        assert "images_missing_alt" in call_kwargs["contents"]
+        assert "competitor_vs_brand_details" in call_kwargs["contents"]
+        assert "ai_generated_suggestion" in call_kwargs["contents"]
+        assert "do not invent" in config["system_instruction"].lower()
+        assert "market share" in config["system_instruction"].lower()
+        assert config["response_mime_type"] == "application/json"
+        assert config["response_json_schema"] == LLMAnalysisResult.model_json_schema()
+        assert config["http_options"].retry_options.attempts == 3
+        assert config["http_options"].retry_options.http_status_codes == [503]
 
     @pytest.mark.asyncio
     async def test_successful_json_text_parsing(
@@ -333,10 +395,10 @@ class TestAnalyzeWebsiteContent:
     ) -> None:
         raw_json = json.dumps(_valid_analysis_dict())
 
-        interaction_mock = AsyncMock(
-            return_value=_interaction_response(raw_json)
+        generate_content_mock = AsyncMock(
+            return_value=_generate_content_response(raw_json)
         )
-        client = _make_mock_client(interaction_mock)
+        client = _make_mock_client(generate_content_mock)
 
         result = await analyze_website_content(
             sample_content,
@@ -516,9 +578,9 @@ class TestAnalyzeWebsiteContent:
         "empty_response",
         [
             None,
-            SimpleNamespace(output_text=None),
-            SimpleNamespace(output_text=""),
-            SimpleNamespace(output_text="   \n  "),
+            SimpleNamespace(text=None),
+            SimpleNamespace(text=""),
+            SimpleNamespace(text="   \n  "),
         ],
     )
     async def test_empty_responses_rejected(
@@ -549,7 +611,7 @@ class TestAnalyzeWebsiteContent:
     ) -> None:
         client = _make_mock_client(
             AsyncMock(
-                return_value=_interaction_response("{not valid json")
+                return_value=_generate_content_response("{not valid json")
             )
         )
 
@@ -574,7 +636,7 @@ class TestAnalyzeWebsiteContent:
 
         client = _make_mock_client(
             AsyncMock(
-                return_value=_interaction_response(json.dumps(incomplete))
+                return_value=_generate_content_response(json.dumps(incomplete))
             )
         )
 
@@ -611,7 +673,7 @@ class TestAnalyzeWebsiteContent:
 
         client = _make_mock_client(
             AsyncMock(
-                return_value=_interaction_response(
+                return_value=_generate_content_response(
                     json.dumps(too_many_services)
                 )
             )
@@ -637,7 +699,7 @@ class TestAnalyzeWebsiteContent:
 
         mock_client = _make_mock_client(
             AsyncMock(
-                return_value=_interaction_response(
+                return_value=_generate_content_response(
                     expected.model_dump_json()
                 )
             )
@@ -664,14 +726,14 @@ class TestAnalyzeWebsiteContent:
                 == "test-synthetic-key-not-real"
             )
 
-            call_kwargs = (
-                mock_client.aio.interactions.create.await_args.kwargs
+            assert (
+                constructor.call_args.kwargs["http_options"].timeout
+                == 12_500
             )
-            assert call_kwargs["timeout"] == 12.5
 
             mock_client.aio.aclose.assert_awaited_once()
 
-        # Verify cleanup also runs when the Interactions API raises an error.
+        # Verify cleanup also runs when the GenerateContent API raises an error.
         failing_client = _make_mock_client(
             AsyncMock(side_effect=RuntimeError("boom"))
         )
@@ -720,7 +782,7 @@ class TestAnalyzeWebsiteContent:
         ]
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         result = await analyze_website_content(
@@ -751,7 +813,7 @@ class TestAnalyzeWebsiteContent:
         payload["competitor_vs_brand_details"]["competitors"] = []
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         result = await analyze_website_content(
@@ -792,7 +854,7 @@ class TestAnalyzeWebsiteContent:
         ]
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         with pytest.raises(LLMServiceError) as exc_info:
@@ -815,7 +877,7 @@ class TestAnalyzeWebsiteContent:
         payload["competitor_vs_brand_details"]["your_brand"]["brand_name"] = "   "
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         with pytest.raises(LLMServiceError) as exc_info:
@@ -828,7 +890,7 @@ class TestAnalyzeWebsiteContent:
         assert exc_info.value.status_code == 502
         assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
 
-    def test_interactions_response_format_schema_compatibility(self) -> None:
+    def test_generate_content_response_format_schema_compatibility(self) -> None:
         schema = LLMAnalysisResult.model_json_schema()
         defs = schema.get("$defs", {})
 
@@ -911,10 +973,10 @@ class TestAnalyzeWebsiteContent:
         valid_settings: Settings,
     ) -> None:
         expected = LLMAnalysisResult.model_validate(_valid_analysis_dict())
-        interaction_mock = AsyncMock(
-            return_value=_interaction_response(expected.model_dump_json())
+        generate_content_mock = AsyncMock(
+            return_value=_generate_content_response(expected.model_dump_json())
         )
-        client = _make_mock_client(interaction_mock)
+        client = _make_mock_client(generate_content_mock)
 
         await analyze_website_content(
             sample_content,
@@ -922,9 +984,10 @@ class TestAnalyzeWebsiteContent:
             client=client,
         )
 
-        call_kwargs = interaction_mock.await_args.kwargs
-        system_lower = call_kwargs["system_instruction"].lower()
-        input_lower = call_kwargs["input"].lower()
+        call_kwargs = generate_content_mock.await_args.kwargs
+        config = call_kwargs["config"]
+        system_lower = config["system_instruction"].lower()
+        contents_lower = call_kwargs["contents"].lower()
 
         assert "or reliable verifiable facts" not in system_lower
         assert "submitted\n       website content explicitly supports" in system_lower
@@ -934,12 +997,12 @@ class TestAnalyzeWebsiteContent:
         assert "weaknesses_or_gaps=[]" in system_lower
         assert "fabricate competitor\n       strengths, weaknesses, or factual claims" in system_lower
 
-        assert "only when <website_content> explicitly supports it" in input_lower
-        assert "never based on general model knowledge" in input_lower
-        assert "source_type='ai_generated_suggestion', is_verified=false" in input_lower
-        assert "strengths=[], weaknesses_or_gaps=[]" in input_lower
-        assert "fabricate competitor strengths, weaknesses" in input_lower
-        assert "/en-in" in input_lower
+        assert "only when <website_content> explicitly supports it" in contents_lower
+        assert "never based on general model knowledge" in contents_lower
+        assert "source_type='ai_generated_suggestion', is_verified=false" in contents_lower
+        assert "strengths=[], weaknesses_or_gaps=[]" in contents_lower
+        assert "fabricate competitor strengths, weaknesses" in contents_lower
+        assert "/en-in" in contents_lower
 
         # Verify Sections 2–5 prompt coverage.
         for expected_phrase in (
@@ -975,7 +1038,7 @@ class TestAnalyzeWebsiteContent:
             }
         ]
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         result = await analyze_website_content(
@@ -994,7 +1057,7 @@ class TestAnalyzeWebsiteContent:
         bad_payload = _valid_analysis_dict()
         bad_payload["top_5_target_search_queries"][0]["platforms"] = ["TikTok"]
         bad_client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(bad_payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
@@ -1013,7 +1076,7 @@ class TestAnalyzeWebsiteContent:
     ) -> None:
         payload = _valid_analysis_dict()
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         result = await analyze_website_content(
             sample_content,
@@ -1034,7 +1097,7 @@ class TestAnalyzeWebsiteContent:
         bad_payload = _valid_analysis_dict()
         bad_payload["seo_improvements"]["primary_keyword"] = "   "
         bad_client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(bad_payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
@@ -1065,7 +1128,7 @@ class TestAnalyzeWebsiteContent:
             }
         )
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         result = await analyze_website_content(
@@ -1106,7 +1169,7 @@ class TestAnalyzeWebsiteContent:
         payload["top_5_services"][0]["is_explicitly_listed"] = is_explicitly_listed
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
@@ -1126,7 +1189,7 @@ class TestAnalyzeWebsiteContent:
         payload = _valid_analysis_dict()
         payload["target_audience_identification"]["secondary_audiences"] = []
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
 
         result = await analyze_website_content(
@@ -1148,7 +1211,7 @@ class TestAnalyzeWebsiteContent:
         bad_payload = _valid_analysis_dict()
         bad_payload["target_audience_identification"]["geographical_focus"] = "   "
         bad_client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(bad_payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(bad_payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
@@ -1189,7 +1252,7 @@ class TestAnalyzeWebsiteContent:
         ]
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
@@ -1230,7 +1293,7 @@ class TestAnalyzeWebsiteContent:
         ]
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         result = await analyze_website_content(
             sample_content,
@@ -1278,7 +1341,7 @@ class TestAnalyzeWebsiteContent:
         payload["target_audience_identification"]["geographical_focus_basis"] = geo_basis
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         result = await analyze_website_content(
             sample_content,
@@ -1313,7 +1376,7 @@ class TestAnalyzeWebsiteContent:
         payload["target_audience_identification"]["geographical_focus_basis"] = geo_basis
 
         client = _make_mock_client(
-            AsyncMock(return_value=_interaction_response(json.dumps(payload)))
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
