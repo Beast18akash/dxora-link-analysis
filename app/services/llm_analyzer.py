@@ -242,38 +242,27 @@ def _parse_and_validate_response(response: object) -> LLMAnalysisResult:
         ) from exc
 
 
-def _sanitize_upstream_message(message: object, api_key: str = "") -> str:
-    """Return a bounded upstream message without configured credentials."""
-
-    if not isinstance(message, str) or not message.strip():
-        return "No upstream error message provided."
-
-    sanitized = message.strip()
-    if api_key:
-        sanitized = sanitized.replace(api_key, "[REDACTED]")
-
-    if len(sanitized) > 500:
-        sanitized = sanitized[:500] + "..."
-
-    return sanitized
-
-
 def _map_api_error(
     exc: genai_errors.APIError,
     model_name: str = "",
-    api_key: str = "",
 ) -> LLMServiceError:
-    """Translate Gemini API errors into sanitized application exceptions."""
+    """Translate Gemini API errors without exposing upstream response details."""
 
     status = getattr(exc, "code", None)
-    upstream_message = getattr(exc, "message", None)
-    sanitized_message = _sanitize_upstream_message(upstream_message, api_key)
+    reason = getattr(exc, "status", None)
+    if (
+        not isinstance(reason, str)
+        or not reason
+        or len(reason) > 80
+        or not all(char.isalnum() or char in "_-." for char in reason)
+    ):
+        reason = "unknown"
 
     logger.warning(
-        "Gemini API request failed: status=%s model=%s message=%s",
+        "Gemini API request failed: status=%s model=%s reason=%s",
         status,
         model_name or "unknown",
-        sanitized_message,
+        reason,
     )
 
     if status == 429:
@@ -404,16 +393,15 @@ async def analyze_website_content(
         ) from exc
 
     except genai_errors.APIError as exc:
-        raise _map_api_error(exc, model_name=model_name, api_key=api_key) from exc
+        raise _map_api_error(exc, model_name=model_name) from exc
 
     except LLMServiceError:
         raise
 
     except Exception as exc:
         logger.warning(
-            "Unexpected Gemini error: %s: %s",
+            "Unexpected Gemini error: %s",
             type(exc).__name__,
-            str(exc),
         )
         raise LLMServiceError(
             "AI analysis service failed to process the request.",
