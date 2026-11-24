@@ -472,11 +472,17 @@ The `evidence/` directory contains genuine JSON API response logs captured direc
 
 ### Browser Screenshots
 
-| File | Demonstrates |
-|---|---|
-| [`screenshots/ss_01_microsoft_200.png`](screenshots/ss_01_microsoft_200.png) | Swagger UI — Microsoft analysis HTTP 200 with five-section response |
-| [`screenshots/ss_02_invalid_url_400.png`](screenshots/ss_02_invalid_url_400.png) | Swagger UI — Invalid URL returning HTTP 400 `INVALID_URL` |
-| [`screenshots/ss_03_ssrf_403.png`](screenshots/ss_03_ssrf_403.png) | Swagger UI — SSRF `http://127.0.0.1` returning HTTP 403 `SSRF_BLOCKED` |
+**Microsoft analysis — HTTP 200 (five-section structured response)**
+
+![Microsoft analysis HTTP 200](screenshots/ss_01_microsoft_200.png)
+
+**Invalid URL — HTTP 400 (`INVALID_URL`)**
+
+![Invalid URL HTTP 400](screenshots/ss_02_invalid_url_400.png)
+
+**SSRF protection — HTTP 403 (`SSRF_BLOCKED`) for `http://127.0.0.1`**
+
+![SSRF HTTP 403](screenshots/ss_03_ssrf_403.png)
 
 ### API Response Logs
 
