@@ -105,18 +105,16 @@ class CompetitorDetail(BaseModel):
         ...,
         description=(
             "Observable competitor strengths supported by reliable evidence in the "
-            "submitted website (when source_type='verified'). Must be an empty list [] "
-            "for 'ai_generated_suggestion' entries unless verified supporting evidence "
-            "is available."
+            "submitted website for source_type='verified'. Must always be an empty "
+            "list [] for source_type='ai_generated_suggestion'."
         ),
     )
     weaknesses_or_gaps: list[str] = Field(
         ...,
         description=(
             "Observable competitor weaknesses or gaps supported by reliable evidence in "
-            "the submitted website (when source_type='verified'). Must be an empty list [] "
-            "for 'ai_generated_suggestion' entries unless verified supporting evidence "
-            "is available."
+            "the submitted website for source_type='verified'. Must always be an empty "
+            "list [] for source_type='ai_generated_suggestion'."
         ),
     )
     source_type: CompetitorSourceType
@@ -130,8 +128,8 @@ class CompetitorDetail(BaseModel):
     verification_note: str = Field(
         ...,
         description=(
-            "Explicit note stating whether this competitor is verified from the "
-            "submitted website or is an unverified AI-generated suggestion."
+            "For verified competitors, explain the explicit website evidence. For an "
+            "AI-generated suggestion, state that it has not been independently verified."
         ),
     )
 
@@ -155,6 +153,15 @@ class CompetitorDetail(BaseModel):
                     "An unverified AI-generated competitor suggestion must use empty "
                     "strengths and weaknesses_or_gaps lists."
                 )
+            note = self.verification_note.lower()
+            if (
+                "ai-generated suggestion" not in note
+                or "not independently verified" not in note
+            ):
+                raise ValueError(
+                    "An AI-generated competitor suggestion must be labeled as such "
+                    "and state that it has not been independently verified."
+                )
         if self.source_type == CompetitorSourceType.VERIFIED and not self.is_verified:
             raise ValueError(
                 "A verified competitor entry must have is_verified set to True."
@@ -169,9 +176,11 @@ class CompetitorVsBrandDetails(BaseModel):
     competitors: list[CompetitorDetail] = Field(
         ...,
         description=(
-            "Relevant competitors (identify at least 3 where reliable information is available; "
-            "do not invent entries merely to satisfy a count; empty list allowed). Each competitor "
-            "must clearly state whether it is verified or an unverified AI-generated suggestion."
+            "Classify competitors explicitly named or compared on the website as verified. "
+            "When the business category is clear but no competitors are named, provide at "
+            "least 3 plausible AI-generated suggestions; mark each unverified with empty "
+            "strengths and weaknesses. Return fewer or none only when the category is too "
+            "ambiguous to identify meaningful competitors, and explain why in grounding_notes."
         ),
     )
     competitive_advantages: list[str] = Field(

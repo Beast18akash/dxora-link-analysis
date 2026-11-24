@@ -11,7 +11,7 @@ from app.config import Settings, get_settings
 from app.exceptions import LLMServiceError, SSRFBlockedError, WebsiteFetchError
 from app.main import create_app
 from app.routers.analysis import get_content_analyzer, get_page_fetcher
-from app.schemas import ExtractedWebsiteContent, LLMAnalysisResult
+from app.schemas import ExtractedWebsiteContent, LinkAnalysisResponse, LLMAnalysisResult
 from app.services.fetcher import FetchedPage
 
 
@@ -55,7 +55,8 @@ def _build_valid_analysis() -> LLMAnalysisResult:
                         "source_type": "ai_generated_suggestion",
                         "is_verified": False,
                         "verification_note": (
-                            "AI-generated suggestion (unverified): not named on the submitted website; "
+                            "AI-generated suggestion; not independently verified and not named "
+                            "on the submitted website; "
                             "no strengths or weaknesses claimed without supporting evidence."
                         ),
                     }
@@ -245,6 +246,58 @@ class TestLinkAnalysisEndpoint:
         assert (
             body["analysis"]["target_audience_identification"]["geographical_focus_basis"]
             == "not_specified"
+        )
+
+    def test_japanese_metadata_is_preserved_with_english_analysis(
+        self, test_app: FastAPI
+    ) -> None:
+        japanese_html = """<!doctype html>
+        <html>
+          <head>
+            <title>マイクロソフト クラウド サービス</title>
+            <meta name="description" content="日本企業向けのクラウドおよびソフトウェアサービス。" />
+          </head>
+          <body>
+            <h1>クラウドサービス</h1>
+            <p>日本の企業にクラウドサービスと業務ソフトウェアを提供します。</p>
+          </body>
+        </html>
+        """
+        final_url = "https://microsoft.com/ja-jp/"
+        expected_title = "マイクロソフト クラウド サービス"
+        expected_description = "日本企業向けのクラウドおよびソフトウェアサービス。"
+
+        async def fake_fetcher(url: str, settings: Settings) -> FetchedPage:
+            return FetchedPage(
+                final_url=final_url,
+                html=japanese_html,
+                status_code=200,
+                content_type="text/html",
+            )
+
+        async def fake_analyzer(
+            content: ExtractedWebsiteContent, settings: Settings
+        ) -> LLMAnalysisResult:
+            assert content.title == expected_title
+            assert content.meta_description == expected_description
+            assert "日本" in content.body_text
+            return _build_valid_analysis()
+
+        test_app.dependency_overrides[get_page_fetcher] = lambda: fake_fetcher
+        test_app.dependency_overrides[get_content_analyzer] = lambda: fake_analyzer
+
+        response = TestClient(test_app).post(
+            "/link-analysis", json={"url": "https://microsoft.com/ja-jp/"}
+        )
+
+        assert response.status_code == 200
+        validated = LinkAnalysisResponse.model_validate_json(response.text)
+        assert validated.metadata.final_url == final_url
+        assert validated.metadata.title == expected_title
+        assert validated.metadata.meta_description == expected_description
+        assert (
+            validated.analysis.seo_improvements.primary_keyword
+            == "FastAPI API engineering consulting"
         )
 
     @pytest.mark.parametrize(

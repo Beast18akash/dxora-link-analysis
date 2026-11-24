@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -61,6 +62,24 @@ def valid_settings() -> Settings:
     )
 
 
+def _ai_generated_competitor_dict(name: str) -> dict:
+    return {
+        "name": name,
+        "overview": (
+            "AI-generated suggestion of a plausible competitor in the cloud and API "
+            "engineering consultancy category; not independently verified."
+        ),
+        "strengths": [],
+        "weaknesses_or_gaps": [],
+        "source_type": "ai_generated_suggestion",
+        "is_verified": False,
+        "verification_note": (
+            "AI-generated suggestion; not independently verified and not explicitly "
+            "identified on the submitted website."
+        ),
+    }
+
+
 def _valid_analysis_dict() -> dict:
     """Return a valid five-section analysis response."""
     return {
@@ -79,22 +98,8 @@ def _valid_analysis_dict() -> dict:
                 ],
             },
             "competitors": [
-                {
-                    "name": "Example Cloud Consultancy",
-                    "overview": (
-                        "General cloud and API engineering consultancy "
-                        "(unverified AI-generated suggestion)."
-                    ),
-                    "strengths": [],
-                    "weaknesses_or_gaps": [],
-                    "source_type": "ai_generated_suggestion",
-                    "is_verified": False,
-                    "verification_note": (
-                        "AI-generated suggestion (unverified): inferred from the "
-                        "brand's category; not mentioned on the submitted website. "
-                        "No strengths or weaknesses are claimed without verifiable evidence."
-                    ),
-                }
+                _ai_generated_competitor_dict(name)
+                for name in ("Thoughtworks", "EPAM Systems", "Globant")
             ],
             "competitive_advantages": [
                 "Extracted fact: explicit specialization in Python FastAPI backends, "
@@ -106,8 +111,8 @@ def _valid_analysis_dict() -> dict:
             ],
             "grounding_notes": (
                 "Brand details and services are extracted directly from the submitted "
-                "website. No competitors were named on the page, so the listed "
-                "competitor is clearly labeled as an unverified AI-generated suggestion."
+                "website. No competitors were named on the page. Three plausible "
+                "category peers are unverified AI-generated suggestions."
             ),
         },
         "top_5_target_search_queries": [
@@ -357,12 +362,14 @@ class TestAnalyzeWebsiteContent:
             == "Cloud & Backend Software Engineering Consultancy"
         )
         assert "FastAPI Backend Development" in section_1.your_brand.main_products_and_services
-        assert len(section_1.competitors) == 1
+        assert len(section_1.competitors) >= 3
         assert (
             section_1.competitors[0].source_type
             == CompetitorSourceType.AI_GENERATED_SUGGESTION
         )
         assert section_1.competitors[0].is_verified is False
+        assert section_1.competitors[0].strengths == []
+        assert section_1.competitors[0].weaknesses_or_gaps == []
         assert len(section_1.competitive_advantages) == 1
         assert len(section_1.positioning_opportunities) == 1
         assert "unverified" in section_1.grounding_notes.lower()
@@ -415,6 +422,57 @@ class TestAnalyzeWebsiteContent:
             == "FastAPI backend engineering consulting"
         )
         assert len(result.seo_improvements.technical_seo_improvements) == 1
+
+    @pytest.mark.asyncio
+    async def test_japanese_website_content_requests_english_analysis(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        japanese_content = sample_content.model_copy(
+            update={
+                "final_url": "https://microsoft.com/ja-jp/",
+                "title": "マイクロソフト クラウド サービス",
+                "meta_description": "日本企業向けのクラウドおよびソフトウェアサービス。",
+                "headings": ["H1: クラウドサービス"],
+                "body_text": "日本の企業にクラウドサービスと業務ソフトウェアを提供します。",
+            }
+        )
+        response_data = _valid_analysis_dict()
+        client = _make_mock_client(
+            AsyncMock(
+                return_value=_generate_content_response(json.dumps(response_data))
+            )
+        )
+
+        result = await analyze_website_content(
+            japanese_content,
+            valid_settings,
+            client=client,
+        )
+
+        request = client.aio.models.generate_content.await_args.kwargs
+        system_instruction = request["config"]["system_instruction"].lower()
+        user_prompt = request["contents"].lower()
+        assert "every ai-generated text value" in system_instruction
+        assert re.search(
+            r"in english,\s+regardless of the website's language",
+            system_instruction,
+        )
+        assert "every ai-generated text value" in user_prompt
+        assert "in english, regardless of the website's language" in user_prompt
+        assert "localized urls and website content" in re.sub(
+            r"\s+", " ", system_instruction
+        )
+        assert "output language does not determine the target market" in user_prompt
+        assert japanese_content.title in request["contents"]
+        assert japanese_content.meta_description in request["contents"]
+        assert "日本" in request["contents"]
+
+        serialized_result = json.dumps(result.model_dump(), ensure_ascii=False)
+        assert not re.search(r"[\u3040-\u30ff\u3400-\u9fff]", serialized_result)
+        assert result.competitor_vs_brand_details.your_brand.brand_name == "Dxora Technologies"
+        assert result.competitor_vs_brand_details.competitors[0].is_verified is False
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -775,7 +833,8 @@ class TestAnalyzeWebsiteContent:
                 "source_type": "ai_generated_suggestion",
                 "is_verified": False,
                 "verification_note": (
-                    "AI-generated suggestion (unverified): not named on the website; "
+                    "AI-generated suggestion; not independently verified and not named "
+                    "on the website; "
                     "no strengths or weaknesses claimed without supporting evidence."
                 ),
             },
@@ -804,14 +863,17 @@ class TestAnalyzeWebsiteContent:
         assert competitors[1].weaknesses_or_gaps == []
 
     @pytest.mark.asyncio
-    async def test_section_1_allows_empty_competitors_when_unverifiable(
+    async def test_section_1_suggests_three_unverified_competitors_for_clear_category(
         self,
         sample_content: ExtractedWebsiteContent,
         valid_settings: Settings,
     ) -> None:
         payload = _valid_analysis_dict()
-        payload["competitor_vs_brand_details"]["competitors"] = []
-
+        competitor_section = payload["competitor_vs_brand_details"]
+        competitor_section["competitors"] = [
+            _ai_generated_competitor_dict(name)
+            for name in ("Thoughtworks", "EPAM Systems", "Globant")
+        ]
         client = _make_mock_client(
             AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
@@ -822,7 +884,55 @@ class TestAnalyzeWebsiteContent:
             client=client,
         )
 
+        competitors = result.competitor_vs_brand_details.competitors
+        assert len(competitors) >= 3
+        assert all(
+            item.source_type == CompetitorSourceType.AI_GENERATED_SUGGESTION
+            and item.is_verified is False
+            and item.strengths == []
+            and item.weaknesses_or_gaps == []
+            and "ai-generated suggestion" in item.verification_note.lower()
+            and "not independently verified" in item.verification_note.lower()
+            for item in competitors
+        )
+        prompt = client.aio.models.generate_content.await_args.kwargs["contents"].lower()
+        assert "business category is clear" in prompt
+        assert "at least 3 plausible names" in prompt
+
+    @pytest.mark.asyncio
+    async def test_section_1_allows_fewer_competitors_when_category_is_ambiguous(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = []
+        payload["competitor_vs_brand_details"]["grounding_notes"] = (
+            "The website describes general business solutions but does not identify a "
+            "clear business category, so meaningful competitors cannot be suggested."
+        )
+        ambiguous_content = sample_content.model_copy(
+            update={
+                "title": "Business Solutions",
+                "body_text": "We provide adaptable solutions for organizations.",
+            }
+        )
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
+        )
+
+        result = await analyze_website_content(
+            ambiguous_content,
+            valid_settings,
+            client=client,
+        )
+
         assert result.competitor_vs_brand_details.competitors == []
+        assert "clear business category" in result.competitor_vs_brand_details.grounding_notes
+        prompt = client.aio.models.generate_content.await_args.kwargs["contents"].lower()
+        assert "category is too ambiguous" in prompt
+        assert "explain why in grounding_notes" in prompt
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -951,11 +1061,14 @@ class TestAnalyzeWebsiteContent:
 
         _walk_schema(schema)
 
-        # Competitors list must NOT enforce minItems=3 so the model is never forced
-        # to invent competitors when reliable information is unavailable.
+        # Keep the list structurally flexible for ambiguous business categories;
+        # the prompt requires suggestions only when the category is clear.
         section_1_def = defs["CompetitorVsBrandDetails"]
         section_1_props = section_1_def["properties"]
         assert "minItems" not in section_1_props["competitors"]
+        competitor_description = section_1_props["competitors"]["description"].lower()
+        assert "at least 3 plausible ai-generated suggestions" in competitor_description
+        assert "category is too ambiguous" in competitor_description
         expected_section_1_keys = {
             "your_brand",
             "competitors",
@@ -989,19 +1102,36 @@ class TestAnalyzeWebsiteContent:
         system_lower = config["system_instruction"].lower()
         contents_lower = call_kwargs["contents"].lower()
 
-        assert "or reliable verifiable facts" not in system_lower
-        assert "submitted\n       website content explicitly supports" in system_lower
-        assert "general model knowledge must always use" in system_lower
+        assert "every ai-generated text value" in system_lower
+        assert re.search(
+            r"in english,\s+regardless of the website's language",
+            system_lower,
+        )
+        assert "localized urls and website content" in re.sub(
+            r"\s+", " ", system_lower
+        )
+        assert "output language does not determine the target market" in system_lower
+        assert "business category is sufficiently clear" in system_lower
+        assert "suggest at least 3 plausible competitors" in system_lower
+        assert "business category is too ambiguous" in system_lower
+        assert "classify every entry independently" in system_lower
         assert "is_verified=false" in system_lower
         assert "strengths=[]" in system_lower
         assert "weaknesses_or_gaps=[]" in system_lower
-        assert "fabricate competitor\n       strengths, weaknesses, or factual claims" in system_lower
+        assert "not independently verified" in system_lower
+        assert "never fabricate competitor-specific facts" in re.sub(
+            r"\s+", " ", system_lower
+        )
 
-        assert "only when <website_content> explicitly supports it" in contents_lower
-        assert "never based on general model knowledge" in contents_lower
+        assert "every ai-generated text value" in contents_lower
+        assert "in english, regardless of the website's language" in contents_lower
+        assert "business category is clear" in contents_lower
+        assert "at least 3 plausible names from general market knowledge" in contents_lower
+        assert "business category is too ambiguous" in contents_lower
         assert "source_type='ai_generated_suggestion', is_verified=false" in contents_lower
         assert "strengths=[], weaknesses_or_gaps=[]" in contents_lower
-        assert "fabricate competitor strengths, weaknesses" in contents_lower
+        assert "not independently verified" in contents_lower
+        assert "do not invent competitor facts" in contents_lower
         assert "/en-in" in contents_lower
 
         # Verify Sections 2–5 prompt coverage.
@@ -1247,13 +1377,45 @@ class TestAnalyzeWebsiteContent:
                 "weaknesses_or_gaps": weaknesses_or_gaps,
                 "source_type": "ai_generated_suggestion",
                 "is_verified": False,
-                "verification_note": "AI-generated suggestion (unverified): not on website.",
+                "verification_note": (
+                    "AI-generated suggestion; not independently verified and not on website."
+                ),
             }
         ]
 
         client = _make_mock_client(
             AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
+
+    @pytest.mark.asyncio
+    async def test_section_1_rejects_suggestion_without_independent_verification_note(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        payload["competitor_vs_brand_details"]["competitors"] = [
+            {
+                **_ai_generated_competitor_dict("Suggested Rival"),
+                "verification_note": (
+                    "AI-generated suggestion (unverified): not explicitly named on "
+                    "the submitted website."
+                ),
+            }
+        ]
+        client = _make_mock_client(
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
+        )
+
         with pytest.raises(LLMServiceError) as exc_info:
             await analyze_website_content(
                 sample_content,
