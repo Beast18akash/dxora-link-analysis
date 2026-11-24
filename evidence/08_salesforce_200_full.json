@@ -1,0 +1,278 @@
+{
+  "http_status": 200,
+  "response": {
+    "requested_url": "https://www.salesforce.com",
+    "metadata": {
+      "final_url": "https://www.salesforce.com/?ir=1&bc=DB",
+      "title": "Salesforce: The #1 AI CRM",
+      "meta_description": "Salesforce is the #1 AI CRM, helping companies connect with customers in a whole new way — uniting the data, apps, and agents that run the business.",
+      "seo_signals": {
+        "has_meta_description": true,
+        "has_canonical": true,
+        "h1_count": 1,
+        "image_count": 281,
+        "images_missing_alt": 131,
+        "internal_link_count": 618,
+        "external_link_count": 31
+      }
+    },
+    "analysis": {
+      "competitor_vs_brand_details": {
+        "your_brand": {
+          "brand_name": "Salesforce",
+          "business_overview": "Salesforce is a leading provider of enterprise cloud computing solutions, specializing in customer relationship management (CRM) and artificial intelligence-driven business applications that unite data, apps, and autonomous agents.",
+          "main_business_category": "Enterprise Software & AI CRM",
+          "main_products_and_services": [
+            "Slack",
+            "Sales Cloud",
+            "Agentforce",
+            "Customer 360",
+            "Data 360",
+            "Tableau",
+            "AIforce"
+          ]
+        },
+        "competitors": [
+          {
+            "name": "Microsoft Dynamics 365",
+            "overview": "Microsoft Dynamics 365 offers enterprise resource planning (ERP) and customer relationship management (CRM) applications integrated with Microsoft productivity tools and cloud services.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "AI-generated suggestion based on general market knowledge in the enterprise CRM category; not independently verified from website text."
+          },
+          {
+            "name": "HubSpot",
+            "overview": "HubSpot provides a cloud-based CRM platform designed for inbound marketing, sales, and customer service, targeting growing businesses and enterprises.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "AI-generated suggestion based on general market knowledge in the CRM software category; not independently verified from website text."
+          },
+          {
+            "name": "Zendesk",
+            "overview": "Zendesk offers customer service software and support ticket management tools designed to improve customer engagement and issue resolution.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "AI-generated suggestion based on general market knowledge in the customer service software category; not independently verified from website text."
+          }
+        ],
+        "competitive_advantages": [
+          "Extensive ecosystem uniting data, applications, and autonomous AI agents through Agentforce and AIforce.",
+          "Comprehensive product suite covering sales, service, marketing, commerce, analytics (Tableau), and collaboration (Slack).",
+          "Deep integration capabilities with enterprise systems, headless toolkits, and multi-agent orchestration frameworks."
+        ],
+        "positioning_opportunities": [
+          "Highlight multi-agent orchestration and autonomous enterprise productivity metrics across targeted industry verticals.",
+          "Expand educational content on transitioning legacy architectures into agentic enterprises."
+        ],
+        "grounding_notes": "Brand details, products, and platform features were directly extracted from the submitted website text. No competitors were explicitly named or compared in the website content; therefore, three plausible category competitors were added as unverified AI-generated suggestions."
+      },
+      "top_5_target_search_queries": [
+        {
+          "query": "best AI CRM platform for enterprise",
+          "platforms": [
+            "Google",
+            "LinkedIn"
+          ],
+          "search_intent": "Commercial",
+          "business_relevance": "Directly targets enterprise buyers searching for market-leading AI CRM solutions, aligning with Salesforce's core positioning.",
+          "target_audience": "Enterprise IT Leaders, Chief Information Officers, and Sales Directors"
+        },
+        {
+          "query": "autonomous AI agents for customer service",
+          "platforms": [
+            "Google",
+            "X"
+          ],
+          "search_intent": "Informational",
+          "business_relevance": "Connects searchers to Agentforce and customer service automation offerings highlighted on the website.",
+          "target_audience": "Customer Support VPs and Operations Managers"
+        },
+        {
+          "query": "Salesforce Slack integration discount offer",
+          "platforms": [
+            "Google",
+            "Facebook"
+          ],
+          "search_intent": "Transactional",
+          "business_relevance": "Captures high-intent prospects looking for current promotional pricing and sales team bundles mentioned on the page.",
+          "target_audience": "Small Business Owners and Sales Team Leads"
+        },
+        {
+          "query": "how to build an agentic enterprise",
+          "platforms": [
+            "LinkedIn",
+            "Google"
+          ],
+          "search_intent": "Informational",
+          "business_relevance": "Aligns with the site's prominent guides and whitepapers on the agentic enterprise and AI transformation.",
+          "target_audience": "Business Executives and Digital Transformation Consultants"
+        },
+        {
+          "query": "unified enterprise data platform and analytics",
+          "platforms": [
+            "Google",
+            "LinkedIn"
+          ],
+          "search_intent": "Commercial",
+          "business_relevance": "Mirrors the capabilities of Data 360 and Tableau in harmonizing enterprise data sources for real-time insights.",
+          "target_audience": "Data Architects, Analysts, and Enterprise Engineers"
+        }
+      ],
+      "seo_improvements": {
+        "primary_keyword": "AI CRM",
+        "secondary_keywords": [
+          "Agentforce",
+          "Customer 360",
+          "enterprise CRM software",
+          "AI agents for business"
+        ],
+        "long_tail_keywords": [
+          "best AI CRM platform for sales and service",
+          "how to build an agentic enterprise with AI agents",
+          "unified customer data and analytics platform"
+        ],
+        "business_keywords": [
+          "cloud CRM",
+          "sales automation",
+          "customer service software",
+          "enterprise intelligence"
+        ],
+        "recommended_seo_title": "Salesforce: The #1 AI CRM & Autonomous Agent Platform",
+        "primary_keyword_integration": "Integrate 'AI CRM' naturally into the main H1 tag, meta description, opening paragraph, and at least two H2 headings to reinforce topical relevance for search engines.",
+        "recommended_meta_description": "Discover Salesforce, the #1 AI CRM. Unite your data, applications, and autonomous AI agents to connect with customers and scale your business securely.",
+        "supporting_content_recommendations": [
+          "Comprehensive buyer's guide on deploying autonomous AI agents in customer service.",
+          "Case studies detailing employee productivity increases through Data 360 and Tableau.",
+          "Industry-specific resource hubs for financial services, healthcare, and manufacturing."
+        ],
+        "technical_seo_improvements": [
+          {
+            "area": "Image Alt Text",
+            "observation": "131 out of 281 images on the page are missing alt text attributes.",
+            "recommendation": "Add descriptive, keyword-optimized alt text to all informative images and icons to improve accessibility and image search performance."
+          },
+          {
+            "area": "Meta Description",
+            "observation": "Current meta description is present but can be further optimized for secondary keyword inclusion and higher click-through rates.",
+            "recommendation": "Refine the meta description to include clear value propositions and strong calls to action while remaining within 155 characters."
+          },
+          {
+            "area": "Content Structure",
+            "observation": "Extensive body text with numerous H2 headings, but logical sub-nesting using H3 tags can be enhanced for complex product suites.",
+            "recommendation": "Ensure strict hierarchical nesting of H2 and H3 tags to help search engine crawlers understand semantic relationships between core platform features."
+          }
+        ]
+      },
+      "top_5_services": [
+        {
+          "name": "Sales Cloud",
+          "description": "Connects sales teams, helps close more deals, and streamlines the sales process with digital teammates and unified pipeline data.",
+          "target_industry": "Cross-Industry B2B and B2C Sales",
+          "target_customer": "Sales Directors, Executives, and Representatives",
+          "main_benefit": "Accelerates pipeline management and boosts sales team productivity.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly listed and described in the website content."
+        },
+        {
+          "name": "Agentforce",
+          "description": "An AI agent platform that delivers 24/7 autonomous support, resolves work end-to-end, and scales customer service operations.",
+          "target_industry": "Enterprise Customer Service and Support",
+          "target_customer": "Customer Support Leaders and Operations Managers",
+          "main_benefit": "Provides always-on, autonomous customer resolutions at enterprise scale.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly listed and described in the website content."
+        },
+        {
+          "name": "Customer 360",
+          "description": "The application layer of business rules, workflows, and semantics that unifies customer data across front and back offices.",
+          "target_industry": "Enterprise Operations across All Sectors",
+          "target_customer": "Chief Operating Officers and Enterprise IT Teams",
+          "main_benefit": "Provides a single live record and unified context for every customer interaction.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly listed and described in the website content."
+        },
+        {
+          "name": "Tableau Analytics",
+          "description": "Accelerates data processing from raw sources into actionable insights and dashboards.",
+          "target_industry": "Business Intelligence and Data Analytics",
+          "target_customer": "Data Analysts, Business Intelligence Managers, and Executives",
+          "main_benefit": "Delivers actionable answers rather than static dashboards.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly listed and described in the website content."
+        },
+        {
+          "name": "Data 360",
+          "description": "Federates, integrates, and harmonizes enterprise data sources in real time to give AI agents trusted context.",
+          "target_industry": "Enterprise Data Management",
+          "target_customer": "Chief Data Officers and Enterprise Data Architects",
+          "main_benefit": "Unifies all data sources in real time with built-in enterprise trust.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly listed and described in the website content."
+        }
+      ],
+      "target_audience_identification": {
+        "primary_audiences": [
+          "Enterprise Executives and Business Leaders",
+          "Sales Leaders and Representatives",
+          "Customer Service and Support Managers",
+          "IT Directors and Enterprise Architects"
+        ],
+        "secondary_audiences": [
+          "Small Business Owners",
+          "Marketing Professionals",
+          "Commerce and Retail Managers",
+          "Data Analysts and Developers"
+        ],
+        "industry_segments": [
+          "Financial Services",
+          "Healthcare & Life Sciences",
+          "Public Sector",
+          "Construction & Real Estate",
+          "Manufacturing"
+        ],
+        "business_types": [
+          "Enterprise Organizations",
+          "Small and Medium Businesses (SMBs)",
+          "B2B and B2C Enterprises"
+        ],
+        "customer_profiles": [
+          "Chief Executive Officers seeking AI-driven enterprise transformation",
+          "Sales Directors looking to streamline pipeline management and team collaboration",
+          "Customer Support VPs aiming to deploy 24/7 autonomous agents",
+          "IT Decision-Makers requiring secure, integrated data platforms"
+        ],
+        "geographical_focus": "Not specified on website",
+        "geographical_focus_basis": "not_specified",
+        "customer_needs_and_challenges": [
+          "Unifying siloed data, apps, and workflows across the organization",
+          "Scaling customer service operations without adding proportional headcount",
+          "Deploying secure, trusted AI agents within strict business guardrails",
+          "Improving employee productivity and automating repetitive manual tasks"
+        ],
+        "customer_interests": [
+          "Autonomous AI agents and machine learning",
+          "Real-time customer data harmonization",
+          "Cross-functional team collaboration tools like Slack",
+          "Advanced business intelligence and predictive analytics"
+        ],
+        "marketing_audience_recommendations": [
+          "Target enterprise decision-makers with messaging focused on productivity gains and the agentic enterprise.",
+          "Promote tailored industry solutions highlighting compliance, security, and sector-specific AI use cases.",
+          "Engage sales and small business segments with promotional bundles and ease-of-use messaging."
+        ],
+        "audience_signals": "Extracted directly from website headings, solution categories, customer success highlights, and industry-specific landing sections emphasizing enterprise-scale transformation, AI agents, and departmental workflows."
+      }
+    }
+  }
+}

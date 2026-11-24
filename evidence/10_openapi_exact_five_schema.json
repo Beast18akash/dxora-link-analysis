@@ -1,0 +1,24 @@
+{
+  "openapi_version": "3.1.0",
+  "api_title": "AI-Powered Website Link Analysis API",
+  "LLMAnalysisResult_top_5_target_search_queries": {
+    "items": {
+      "$ref": "#/components/schemas/TargetSearchQuery"
+    },
+    "type": "array",
+    "maxItems": 5,
+    "minItems": 5,
+    "title": "Top 5 Target Search Queries",
+    "description": "Exactly 5 relevant qualitative target search queries across Google, Facebook, Instagram, LinkedIn, and X grounded in page content. When the page content is sparse, generate plausible queries from the available brand and category signals and label them as AI-generated suggestions in business_relevance."
+  },
+  "LLMAnalysisResult_top_5_services": {
+    "items": {
+      "$ref": "#/components/schemas/ServiceItem"
+    },
+    "type": "array",
+    "maxItems": 5,
+    "minItems": 5,
+    "title": "Top 5 Services",
+    "description": "Exactly 5 services with explicit labeling distinguishing website-extracted services (source_type='extracted_from_website') from inferred recommendations (source_type='inferred_recommendation'). When the website explicitly lists fewer than 5 services, fill remaining entries as inferred recommendations grounded in the brand category and content. Never fabricate services as extracted."
+  }
+}

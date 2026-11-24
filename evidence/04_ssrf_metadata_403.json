@@ -1,0 +1,7 @@
+{
+  "http_status": 403,
+  "response": {
+    "error_code": "SSRF_BLOCKED",
+    "message": "Access to non-public IP address '169.254.169.254' is blocked."
+  }
+}

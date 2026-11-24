@@ -1,0 +1,72 @@
+{
+  "http_status": 200,
+  "requested_url": "https://www.microsoft.com",
+  "final_url": "https://www.microsoft.com/en-us",
+  "title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
+  "analysis_sections": [
+    "competitor_vs_brand_details",
+    "top_5_target_search_queries",
+    "seo_improvements",
+    "top_5_services",
+    "target_audience_identification"
+  ],
+  "brand_name": "Microsoft",
+  "main_business_category": "Technology, Software, and Cloud Computing",
+  "products_and_services": [
+    "Microsoft 365",
+    "Copilot",
+    "Azure",
+    "Windows",
+    "Surface devices",
+    "XBOX",
+    "Microsoft Teams",
+    "Dynamics 365",
+    "Microsoft Power Platform",
+    "Visual Studio"
+  ],
+  "competitors_count": 3,
+  "competitor_source_types": [
+    "ai_generated_suggestion",
+    "ai_generated_suggestion",
+    "ai_generated_suggestion"
+  ],
+  "search_queries_count": 5,
+  "search_queries": [
+    "Buy Microsoft 365 subscription for business",
+    "Run AI apps at scale on Azure",
+    "Latest Surface Pro and Surface Laptop specs",
+    "XBOX Game Pass games list and pricing",
+    "How to use Microsoft Copilot for work"
+  ],
+  "services_count": 5,
+  "services": [
+    {
+      "name": "Microsoft 365 Productivity Suite",
+      "source_type": "extracted_from_website",
+      "is_explicitly_listed": true
+    },
+    {
+      "name": "Microsoft Azure Cloud Solutions",
+      "source_type": "extracted_from_website",
+      "is_explicitly_listed": true
+    },
+    {
+      "name": "Microsoft Teams Collaboration",
+      "source_type": "extracted_from_website",
+      "is_explicitly_listed": true
+    },
+    {
+      "name": "XBOX Game Pass",
+      "source_type": "extracted_from_website",
+      "is_explicitly_listed": true
+    },
+    {
+      "name": "Enterprise Security and AI Integration",
+      "source_type": "extracted_from_website",
+      "is_explicitly_listed": true
+    }
+  ],
+  "primary_keyword": "Microsoft products and services",
+  "geo_focus": "Inferred: United States (based on localized URL path '/en-us' and English language settings, though serving a global audience)",
+  "geo_focus_basis": "inferred"
+}

@@ -1,0 +1,280 @@
+{
+  "http_status": 200,
+  "response": {
+    "requested_url": "https://www.microsoft.com",
+    "metadata": {
+      "final_url": "https://www.microsoft.com/en-us",
+      "title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
+      "meta_description": "Explore Microsoft products and services and support for your home or business. Shop Microsoft 365, Copilot, Teams, Xbox, Windows, Azure, Surface and more.",
+      "seo_signals": {
+        "has_meta_description": true,
+        "has_canonical": true,
+        "h1_count": 1,
+        "image_count": 40,
+        "images_missing_alt": 14,
+        "internal_link_count": 125,
+        "external_link_count": 10
+      }
+    },
+    "analysis": {
+      "competitor_vs_brand_details": {
+        "your_brand": {
+          "brand_name": "Microsoft",
+          "business_overview": "Microsoft is a global technology corporation offering an extensive ecosystem of software, hardware, cloud computing services, artificial intelligence solutions, and gaming products for personal and business use.",
+          "main_business_category": "Technology, Software, and Cloud Computing",
+          "main_products_and_services": [
+            "Microsoft 365",
+            "Copilot",
+            "Azure",
+            "Windows",
+            "Surface devices",
+            "XBOX",
+            "Microsoft Teams",
+            "Dynamics 365",
+            "Microsoft Power Platform",
+            "Visual Studio"
+          ]
+        },
+        "competitors": [
+          {
+            "name": "Apple",
+            "overview": "A major technology competitor offering consumer electronics, software, and online services.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "This is an AI-generated suggestion from general market knowledge and is not independently verified by the submitted website content."
+          },
+          {
+            "name": "Google",
+            "overview": "A leading technology competitor specializing in internet-related services, cloud computing, and software.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "This is an AI-generated suggestion from general market knowledge and is not independently verified by the submitted website content."
+          },
+          {
+            "name": "Amazon Web Services (AWS)",
+            "overview": "A prominent cloud computing competitor providing on-demand cloud computing platforms and APIs.",
+            "strengths": [],
+            "weaknesses_or_gaps": [],
+            "source_type": "ai_generated_suggestion",
+            "is_verified": false,
+            "verification_note": "This is an AI-generated suggestion from general market knowledge and is not independently verified by the submitted website content."
+          }
+        ],
+        "competitive_advantages": [
+          "Comprehensive ecosystem spanning personal productivity, gaming, enterprise cloud, and hardware devices.",
+          "Deep integration of artificial intelligence and Copilot across consumer and enterprise applications.",
+          "Robust enterprise security solutions and cloud infrastructure scaling via Azure."
+        ],
+        "positioning_opportunities": [
+          "Highlight seamless cross-device synchronization between Windows, Surface, and mobile applications.",
+          "Expand messaging on sustainable and community-driven AI initiatives for enterprise and education.",
+          "Promote tailored hybrid work solutions combining Microsoft Teams, Copilot, and Azure."
+        ],
+        "grounding_notes": "The brand details and offerings are extracted directly from the website content. No competitors were explicitly named or compared within the text, so three plausible industry competitors were added as unverified AI-generated suggestions."
+      },
+      "top_5_target_search_queries": [
+        {
+          "query": "Buy Microsoft 365 subscription for business",
+          "platforms": [
+            "Google",
+            "LinkedIn"
+          ],
+          "search_intent": "Transactional",
+          "business_relevance": "Directly targets business customers looking to purchase core productivity and collaboration apps.",
+          "target_audience": "Business owners, IT managers, and enterprise decision-makers"
+        },
+        {
+          "query": "Run AI apps at scale on Azure",
+          "platforms": [
+            "Google",
+            "LinkedIn"
+          ],
+          "search_intent": "Commercial",
+          "business_relevance": "Captures enterprise users seeking cloud infrastructure and scalable AI modernization tools.",
+          "target_audience": "Software developers, enterprise architects, and CTOs"
+        },
+        {
+          "query": "Latest Surface Pro and Surface Laptop specs",
+          "platforms": [
+            "Google",
+            "Instagram",
+            "X"
+          ],
+          "search_intent": "Commercial",
+          "business_relevance": "Drives traffic from consumers and professionals shopping for high-performance mobile hardware.",
+          "target_audience": "Consumers, students, and mobile professionals"
+        },
+        {
+          "query": "XBOX Game Pass games list and pricing",
+          "platforms": [
+            "Google",
+            "Instagram",
+            "Facebook",
+            "X"
+          ],
+          "search_intent": "Transactional",
+          "business_relevance": "Engages gamers interested in subscription gaming services across consoles and PC.",
+          "target_audience": "Gamers and entertainment enthusiasts"
+        },
+        {
+          "query": "How to use Microsoft Copilot for work",
+          "platforms": [
+            "Google",
+            "LinkedIn",
+            "X"
+          ],
+          "search_intent": "Informational",
+          "business_relevance": "Attracts professionals seeking to understand and adopt AI-driven productivity tools.",
+          "target_audience": "Office workers, educators, and enterprise teams"
+        }
+      ],
+      "seo_improvements": {
+        "primary_keyword": "Microsoft products and services",
+        "secondary_keywords": [
+          "Microsoft 365",
+          "Azure cloud AI",
+          "Surface Laptop",
+          "XBOX games"
+        ],
+        "long_tail_keywords": [
+          "buy Microsoft 365 business productivity apps",
+          "run AI at scale on Azure cloud",
+          "latest Surface Pro with Snapdragon processor"
+        ],
+        "business_keywords": [
+          "cloud computing",
+          "artificial intelligence",
+          "enterprise security",
+          "productivity software"
+        ],
+        "recommended_seo_title": "Microsoft – AI, Cloud, Productivity, Computing, Gaming & Apps",
+        "primary_keyword_integration": "Integrate 'Microsoft products and services' naturally into the H1 heading, meta description, and introductory body text to reinforce the core brand value proposition without keyword stuffing.",
+        "recommended_meta_description": "Explore Microsoft products, services, and support for home and business. Shop Microsoft 365, Copilot, Teams, Xbox, Windows, Azure, Surface, and more.",
+        "supporting_content_recommendations": [
+          "Detailed comparison guides for Surface Laptop models and configurations",
+          "Enterprise case studies on running AI workloads securely on Azure",
+          "Getting started tutorials for Microsoft Copilot and Teams integration"
+        ],
+        "technical_seo_improvements": [
+          {
+            "area": "Image Alt Text",
+            "observation": "14 images are missing alt text out of 40 total images.",
+            "recommendation": "Add descriptive, keyword-relevant alt text to all remaining images to improve accessibility and image search performance."
+          },
+          {
+            "area": "Internal Links",
+            "observation": "Extensive navigation and internal link structure with 125 internal links.",
+            "recommendation": "Ensure contextual internal links within body copy use descriptive anchor text pointing to key product landing pages."
+          },
+          {
+            "area": "Headings",
+            "observation": "Single H1 tag present, but multiple H2 tags cover diverse product lines.",
+            "recommendation": "Maintain a strict hierarchical heading structure (H1 -> H2 -> H3) to clearly signal content topics to search engine crawlers."
+          }
+        ]
+      },
+      "top_5_services": [
+        {
+          "name": "Microsoft 365 Productivity Suite",
+          "description": "Powerful productivity applications combined with advanced AI features, Copilot, and cloud storage in a single plan.",
+          "target_industry": "Information Technology and Corporate Business",
+          "target_customer": "Business professionals, enterprises, and individual users",
+          "main_benefit": "Streamlines daily workflows, document collaboration, and communication across devices.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly described in website copy for personal and business productivity."
+        },
+        {
+          "name": "Microsoft Azure Cloud Solutions",
+          "description": "Cloud computing platform enabling organizations to modernize their estate and securely build AI applications at scale.",
+          "target_industry": "Cloud Computing and Enterprise IT",
+          "target_customer": "Enterprise architects, developers, and IT organizations",
+          "main_benefit": "Provides scalable, secure infrastructure and advanced AI capabilities on flexible terms.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly described in website copy regarding cloud and AI workloads."
+        },
+        {
+          "name": "Microsoft Teams Collaboration",
+          "description": "Integrated platform for online meetings, chat, real-time collaboration, and shared cloud storage.",
+          "target_industry": "Corporate Communication and Education",
+          "target_customer": "Teams, remote workers, and educational institutions",
+          "main_benefit": "Unifies communication and file sharing in a single workspace to grow business operations.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly described in website copy under business collaboration tools."
+        },
+        {
+          "name": "XBOX Game Pass",
+          "description": "Subscription service offering access to play hundreds of games from every genre across consoles and PC.",
+          "target_industry": "Gaming and Entertainment",
+          "target_customer": "Gamers and entertainment consumers",
+          "main_benefit": "Delivers an extensive library of games across multiple devices for a single subscription fee.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly described in website copy as a primary gaming offering."
+        },
+        {
+          "name": "Enterprise Security and AI Integration",
+          "description": "Advanced security solutions and AI-driven guidance designed to protect digital estates and accelerate innovation.",
+          "target_industry": "Cybersecurity and Enterprise Technology",
+          "target_customer": "Chief Information Security Officers and Enterprise IT teams",
+          "main_benefit": "Enhances threat detection and safeguards data integrity for the agentic era.",
+          "source_type": "extracted_from_website",
+          "is_explicitly_listed": true,
+          "source_note": "Explicitly described in website copy under security and AI innovations."
+        }
+      ],
+      "target_audience_identification": {
+        "primary_audiences": [
+          "Individual consumers seeking personal computing devices and entertainment",
+          "Business professionals and enterprises requiring productivity and cloud infrastructure"
+        ],
+        "secondary_audiences": [
+          "Students and educators utilizing academic tools and devices",
+          "Software developers building applications on Azure and developer platforms"
+        ],
+        "industry_segments": [
+          "Information Technology",
+          "Enterprise Software",
+          "Gaming and Entertainment",
+          "Education"
+        ],
+        "business_types": [
+          "B2C Consumers",
+          "B2B Small and Medium Businesses",
+          "Enterprise Corporations",
+          "Educational Institutions"
+        ],
+        "customer_profiles": [
+          "IT administrators and enterprise decision-makers",
+          "Software developers and engineers",
+          "Gamers and digital entertainment enthusiasts",
+          "Office workers and remote professionals"
+        ],
+        "geographical_focus": "Inferred: United States (based on localized URL path '/en-us' and English language settings, though serving a global audience)",
+        "geographical_focus_basis": "inferred",
+        "customer_needs_and_challenges": [
+          "Need for reliable cloud infrastructure and scalable AI application development",
+          "Desire for seamless productivity and remote collaboration tools",
+          "Requirement for robust enterprise security in modern digital environments"
+        ],
+        "customer_interests": [
+          "Artificial intelligence and Copilot tools",
+          "High-performance personal computing and Surface hardware",
+          "Console and PC gaming content and subscriptions"
+        ],
+        "marketing_audience_recommendations": [
+          "Target enterprise leaders with case studies demonstrating AI and cloud scalability on Azure.",
+          "Engage consumers and professionals through targeted promotions for Surface devices and Microsoft 365.",
+          "Connect with the gaming community via XBOX Game Pass campaigns across digital and social platforms."
+        ],
+        "audience_signals": "Extracted from website copy emphasizing personal and business solutions, Surface hardware, Azure cloud computing, Microsoft 365 productivity apps, and XBOX gaming offerings."
+      }
+    }
+  }
+}

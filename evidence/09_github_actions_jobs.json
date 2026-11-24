@@ -1,0 +1,99 @@
+{
+  "run_id": 45366674096,
+  "jobs": [
+    {
+      "name": "Run automated tests",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-24T09:35:42Z",
+      "completed_at": "2026-11-24T09:36:00Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Python",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dev dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run test suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Python",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "Build and publish Docker image",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-24T09:36:03Z",
+      "completed_at": "2026-11-24T09:36:42Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Docker Buildx",
+          "conclusion": "success"
+        },
+        {
+          "name": "Log in to GitHub Container Registry",
+          "conclusion": "success"
+        },
+        {
+          "name": "Prepare lowercase image name",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build and push image",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Build and push image",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Log in to GitHub Container Registry",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Docker Buildx",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out repository",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

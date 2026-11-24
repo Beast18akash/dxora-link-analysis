@@ -22,7 +22,7 @@ Given a single public `http` or `https` URL, the API:
 
 ## Features
 
-The features below are implemented in the current backend codebase and covered by **225 offline automated unit and API tests** (using mocked DNS, HTTP transport, and Gemini API clients):
+The features below are implemented in the current backend codebase and covered by **233 offline automated unit and API tests** (using mocked DNS, HTTP transport, and Gemini API clients):
 
 - **Website URL Analysis (`POST /link-analysis`)**: End-to-end async pipeline returning extracted page metadata alongside structured AI insights.
 
@@ -445,11 +445,11 @@ python -m pytest -v
 
 ### Automated Test Coverage
 
-The test suite includes **225 automated unit and API tests** across five modules:
+The test suite includes **233 automated unit and API tests** across five modules:
 
 - `tests/test_security.py` (88 tests): URL syntax, schemes, credentials, local domains, IPv4/IPv6/transition IP filtering, DNS errors, IDNA Punycode normalization, malformed IPv6 & zone identifiers, and DNS rebinding scenarios.
 
-- `tests/test_fetcher.py` (29 tests): Mocked async `httpx` fetching (`httpx.MockTransport`), IP pinning, `Host` header & HTTPS SNI behavior, manual redirect validation, SSRF redirect blocking, redirect limits, timeouts, connection failures, content-type checks, and `Content-Length`/streaming size caps.
+- `tests/test_fetcher.py` (37 tests): Mocked async `httpx` fetching (`httpx.MockTransport`), IP pinning, `Host` header & HTTPS SNI behavior, manual redirect validation, SSRF redirect blocking, redirect limits, timeouts, connection failures, content-type checks, `Content-Length`/streaming size caps, and English locale-preference selection.
 
 - `tests/test_parser.py` (22 tests): Metadata, SEO signals, noise stripping, heading caps, text truncation/validation, malformed HTML, invalid canonical URLs, IDNA links, and offline `tldextract` PSL behavior.
 
@@ -458,9 +458,42 @@ The test suite includes **225 automated unit and API tests** across five modules
 - `tests/test_api.py` (23 tests): FastAPI `TestClient` integration tests for `GET /health`, `POST /link-analysis`, generic safe `422` validation errors, domain error mappings, and sanitized `500` responses using dependency overrides.
 
 > **Verification scope**:
-> - **Automated offline suite (independently run locally)**: `225 passed, 0 failed` with one upstream Starlette `TestClient` deprecation warning, using mocked DNS, HTTP transport, and Gemini API clients for determinism and speed.
+> - **Automated offline suite (independently run locally)**: `233 passed, 0 failed` with one upstream Starlette `TestClient` deprecation warning, using mocked DNS, HTTP transport, and Gemini API clients for determinism and speed.
 > - **Manual live integration tests**: The expanded five-section analysis was successfully tested through Swagger UI against Microsoft (`HTTP 200`) and Salesforce (`HTTP 200`). Shopify returned `HTTP 502` because the target website rejected the fetch with `HTTP 403`; this is recorded as an upstream access restriction, not a successful analysis.
 > - **Performance benchmarking**: No live cross-provider latency or accuracy benchmark has been executed.
+
+---
+
+## Implementation Evidence
+
+The `screenshots/` directory contains browser screenshots from the production Swagger UI.
+The `evidence/` directory contains genuine JSON API response logs captured directly from
+**https://dxora-link-analysis-api-1311.onrender.com** on **2026-11-24**.
+
+### Browser Screenshots
+
+| File | Demonstrates |
+|---|---|
+| [`screenshots/ss_01_microsoft_200.png`](screenshots/ss_01_microsoft_200.png) | Swagger UI — Microsoft analysis HTTP 200 with five-section response |
+| [`screenshots/ss_02_invalid_url_400.png`](screenshots/ss_02_invalid_url_400.png) | Swagger UI — Invalid URL returning HTTP 400 `INVALID_URL` |
+| [`screenshots/ss_03_ssrf_403.png`](screenshots/ss_03_ssrf_403.png) | Swagger UI — SSRF `http://127.0.0.1` returning HTTP 403 `SSRF_BLOCKED` |
+
+### API Response Logs
+
+| File | Demonstrates | HTTP Status |
+|---|---|---|
+| [`evidence/01_health.json`](evidence/01_health.json) | `GET /health` liveness check | 200 |
+| [`evidence/02_invalid_url_400.json`](evidence/02_invalid_url_400.json) | Invalid URL rejected | 400 `INVALID_URL` |
+| [`evidence/03_ssrf_loopback_403.json`](evidence/03_ssrf_loopback_403.json) | SSRF — `http://127.0.0.1` blocked | 403 `SSRF_BLOCKED` |
+| [`evidence/04_ssrf_metadata_403.json`](evidence/04_ssrf_metadata_403.json) | SSRF — `http://169.254.169.254` blocked | 403 `SSRF_BLOCKED` |
+| [`evidence/05_ssrf_private_ip_403.json`](evidence/05_ssrf_private_ip_403.json) | SSRF — `http://192.168.1.1` blocked | 403 `SSRF_BLOCKED` |
+| [`evidence/06_validation_error_422.json`](evidence/06_validation_error_422.json) | Missing required field | 422 `VALIDATION_ERROR` |
+| [`evidence/07_microsoft_200_summary.json`](evidence/07_microsoft_200_summary.json) | Microsoft — 5 sections, 5 queries, 5 services | 200 |
+| [`evidence/07_microsoft_200_full.json`](evidence/07_microsoft_200_full.json) | Microsoft — complete structured JSON response | 200 |
+| [`evidence/08_salesforce_200_summary.json`](evidence/08_salesforce_200_summary.json) | Salesforce — 5 sections, 5 queries, 5 services | 200 |
+| [`evidence/08_salesforce_200_full.json`](evidence/08_salesforce_200_full.json) | Salesforce — complete structured JSON response | 200 |
+| [`evidence/09_github_actions_jobs.json`](evidence/09_github_actions_jobs.json) | GitHub Actions CI — test + Docker build passed | — |
+| [`evidence/10_openapi_exact_five_schema.json`](evidence/10_openapi_exact_five_schema.json) | Live OpenAPI schema: `minItems=5, maxItems=5` confirmed | — |
 
 ---
 
@@ -471,7 +504,7 @@ The test suite includes **225 automated unit and API tests** across five modules
 > **Evidence Distinction**:
 > - **Published provider specifications**: Pricing (per 1M tokens), context windows, and native structured JSON output capabilities are sourced directly from official provider documentation on `2026-11-21`.
 > - **Estimated performance & cost**: Per-analysis token volumes, USD costs, and expected latency ranges are analytical estimates derived from this backend's payload caps (`MAX_EXTRACTED_TEXT_CHARS=10000`) and five-section JSON schema.
-> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. The automated suite (`225 passed`) uses mocked DNS, HTTP transport, and Gemini clients. Separately, manual live end-to-end tests of the expanded five-section schema returned HTTP 200 for Microsoft and Salesforce; Shopify was blocked by an upstream HTTP 403.
+> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. The automated suite (`233 passed`) uses mocked DNS, HTTP transport, and Gemini clients. Separately, manual live end-to-end tests of the expanded five-section schema returned HTTP 200 for Microsoft and Salesforce; Shopify was blocked by an upstream HTTP 403.
 
 ### Model Comparison (Published Provider Specifications)
 
@@ -502,7 +535,7 @@ Because `app/config.py` caps extracted body text at `MAX_EXTRACTED_TEXT_CHARS=10
 
 - **Estimated input tokens per analysis**: `~3,000 – 4,500 tokens`
 - **Estimated output tokens per analysis**: `~1,200 – 2,000 tokens` for the full five-section structured JSON report *(note: models with internal reasoning/thinking tokens bill those tokens at the output rate, which can increase effective output token usage)*
-- **Expected end-to-end response time (Estimated)**: `~3 – 10 seconds` under normal network conditions (HTML fetch timeout capped at `10.0s`; Gemini request timeout capped at `60.0s`)
+- **Expected end-to-end response time (Estimated)**: `~3 – 10 seconds` under normal network conditions (HTML fetch timeout capped at `10.0s`; Gemini request timeout capped at `90.0s`)
 
 | Model | Estimated Input Cost (3K–4.5K tokens) | Estimated Output Cost (1.2K–2K visible JSON tokens) | Estimated Total Cost per Analysis | Estimated Cost per 1,000 Analyses |
 | --- | --- | --- | --- | --- |
@@ -650,13 +683,13 @@ The `Dockerfile` runs as a non-root user (`appuser`), defaults to port `4000` wh
 
 The backend codebase, five-section schemas, grounding prompts, automated tests, local Docker verification, live local API tests, and LLM research documentation are complete. The following items remain before final submission:
 
-- [x] **Automated Test Suite**: Independently run locally with `python -m pytest -v` — `225 passed, 0 failed, 1 warning`.
+- [x] **Automated Test Suite**: Independently run locally with `python -m pytest -v` — `233 passed, 0 failed, 1 warning`.
 - [x] **Live Five-Section API Tests (Local)**: Microsoft and Salesforce returned HTTP `200`; Shopify returned HTTP `502` because the target site returned HTTP `403`.
 - [x] **Build & Smoke-Test Docker Container Locally**: Docker image built and container started successfully; container reported healthy status, `GET /health` returned HTTP `200`, and `/docs` loaded successfully.
 - [x] **Push to Public GitHub Repository**: Repository published at https://github.com/Beast18akash/dxora-link-analysis.
-- [ ] **Deploy Publicly & Verify `/docs`**: Deploy the container with `GEMINI_API_KEY` configured through platform secrets, then verify the public `/health`, `/docs`, and a live `POST /link-analysis` request.
-- [ ] **Capture Screenshots / Logs**: Save screenshots or response logs demonstrating the deployed API and `/docs`.
-- [ ] **Complete Social & Final Email Submission**: Complete the required LinkedIn / Instagram follows and send the final submission email with the repository URL, public deployment URL, and required details.
+- [x] **Deploy Publicly & Verify `/docs`**: Application deployed on Render at https://dxora-link-analysis-api-1311.onrender.com; `GET /health` returns `{"status":"ok"}`, `GET /docs` loads Swagger UI, and live `POST /link-analysis` returns structured `HTTP 200` responses for Microsoft and Salesforce.
+- [x] **Capture API Response Logs**: Genuine JSON response logs committed in `evidence/` and browser screenshots in `screenshots/` — demonstrating health check, Microsoft/Salesforce `HTTP 200`, invalid URL `HTTP 400`, SSRF `HTTP 403`, validation error `HTTP 422`, GitHub Actions CI results, and OpenAPI schema confirming `minItems=5` enforcement.
+- [ ] **Complete Social & Final Email Submission**: Complete the required LinkedIn / Instagram follows and send the final submission email with the repository URL, public deployment URL, and required details. *(Must be completed personally.)*
 
 ---
 
@@ -664,7 +697,7 @@ The backend codebase, five-section schemas, grounding prompts, automated tests, 
 
 - **API Authentication & Rate Limiting**: Add API key or bearer-token auth and per-IP/per-client rate limiting before public exposure.
 
-- **Configurable LLM Timeout Setting**: Expose `LLM_TIMEOUT_SECONDS` in `app/config.py` (currently fixed at `60.0s` default in `llm_analyzer.py`).
+- **Configurable LLM Timeout Setting**: Expose `LLM_TIMEOUT_SECONDS` in `app/config.py` (currently fixed at `90.0s` default in `llm_analyzer.py`).
 
 - **Response Caching**: Add short-TTL caching (e.g., Redis) keyed by normalized URL to reduce repeated fetches and LLM token costs.
 

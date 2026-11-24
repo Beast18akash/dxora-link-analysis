@@ -1,0 +1,8 @@
+{
+  "http_status": 200,
+  "response": {
+    "status": "ok",
+    "service": "AI-Powered Website Link Analysis API",
+    "version": "1.0.0"
+  }
+}

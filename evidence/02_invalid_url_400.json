@@ -1,0 +1,7 @@
+{
+  "http_status": 400,
+  "response": {
+    "error_code": "INVALID_URL",
+    "message": "Only 'http' and 'https' URLs are supported."
+  }
+}
