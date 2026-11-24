@@ -159,6 +159,12 @@ def _normalize_domain(hostname: str) -> str:
     return ".".join(_registered_domain_key(hostname))
 
 
+def is_same_registered_domain(first_hostname: str, second_hostname: str) -> bool:
+    """Return whether two hostnames belong to the same registered domain."""
+    first_key = _registered_domain_key(first_hostname)
+    return bool(first_key) and first_key == _registered_domain_key(second_hostname)
+
+
 def _count_links(soup: BeautifulSoup, base_url: str) -> tuple[int, int]:
     """Count internal and external HTTP/HTTPS links on the page."""
     try:

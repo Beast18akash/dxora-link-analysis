@@ -151,6 +151,240 @@ class TestFetchWebsiteHtml:
         assert extracted.meta_description == "日本向けクラウドサービス。"
 
     @pytest.mark.asyncio
+    async def test_root_prefers_advertised_hreflang_english_page(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        japanese_html = (
+            '<html lang="ja"><head><title>日本語のページ</title>'
+            '<meta name="description" content="日本語の説明。" />'
+            '<link rel="alternate" hreflang="en" href="/en/" />'
+            "</head><body><h1>日本語</h1></body></html>"
+        )
+        english_html = (
+            '<html lang="en"><head><title>Global Cloud Services</title>'
+            '<meta name="description" content="English page description." />'
+            "</head><body><h1>English page</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.url.path == "/":
+                return httpx.Response(302, headers={"Location": "/jp/"})
+            html = japanese_html if request.url.path == "/jp/" else english_html
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.url.path for request in requests] == ["/", "/jp/", "/en/"]
+        assert all(
+            request.headers["accept-language"] == "en-US,en;q=0.9"
+            for request in requests
+        )
+        assert page.final_url == "https://example.com/en/"
+        assert extracted.title == "Global Cloud Services"
+        assert extracted.meta_description == "English page description."
+
+    @pytest.mark.asyncio
+    async def test_root_uses_explicit_english_regional_link_without_hreflang(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        japanese_html = (
+            '<html lang="ja"><head><title>日本語のページ</title>'
+            '<meta name="description" content="日本語の説明。" /></head><body>'
+            '<a lang="en" data-tracking-type="regional" href="/uk/">English</a>'
+            '<a lang="en" data-tracking-type="regional" href="/uk/">English</a>'
+            "</body></html>"
+        )
+        english_html = (
+            '<html lang="en-GB"><head><title>Salesforce UK</title>'
+            '<meta name="description" content="English regional description." />'
+            "</head><body><h1>English page</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.url.path == "/":
+                return httpx.Response(302, headers={"Location": "/jp/"})
+            html = japanese_html if request.url.path == "/jp/" else english_html
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.url.path for request in requests] == ["/", "/jp/", "/uk/"]
+        assert page.final_url == "https://example.com/uk/"
+        assert extracted.title == "Salesforce UK"
+        assert extracted.meta_description == "English regional description."
+
+    @pytest.mark.asyncio
+    async def test_root_ignores_unrelated_english_url_and_preserves_original_page(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        japanese_html = (
+            '<html lang="ja"><head><title>日本語のページ</title>'
+            '<meta name="description" content="日本語の説明。" />'
+            '<link rel="alternate" hreflang="en" '
+            'href="https://unrelated.example.net/en/" />'
+            "</head><body><h1>日本語</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=japanese_html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.url.path for request in requests] == ["/"]
+        assert page.final_url == "https://example.com/"
+        assert extracted.title == "日本語のページ"
+        assert extracted.meta_description == "日本語の説明。"
+
+    @pytest.mark.asyncio
+    async def test_english_hreflang_target_with_japanese_document_is_rejected(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        original_html = (
+            '<html lang="ja"><head><title>Original Japanese Page</title>'
+            '<meta name="description" content="Original Japanese metadata." />'
+            '<link rel="alternate" hreflang="en" href="/en/" />'
+            "</head><body><h1>Original</h1></body></html>"
+        )
+        mislabeled_alternate_html = (
+            '<html lang="ja"><head><title>Still Japanese</title></head>'
+            "<body><h1>Still Japanese</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            html = original_html if request.url.path == "/" else mislabeled_alternate_html
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.url.path for request in requests] == ["/", "/en/"]
+        assert page.final_url == "https://example.com/"
+        assert extracted.title == "Original Japanese Page"
+        assert extracted.meta_description == "Original Japanese metadata."
+
+    @pytest.mark.asyncio
+    async def test_english_alternate_private_redirect_is_blocked(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        original_html = (
+            '<html lang="ja"><head><title>Original Page</title>'
+            '<meta name="description" content="Original metadata." />'
+            '<link rel="alternate" hreflang="en" href="/en/" />'
+            "</head><body><h1>Original page</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            if request.url.path == "/en/":
+                return httpx.Response(
+                    302,
+                    headers={
+                        "Location": "https://internal.example.com/private",
+                    },
+                )
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=original_html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.url.path for request in requests] == ["/", "/en/"]
+        assert page.final_url == "https://example.com/"
+        assert extracted.title == "Original Page"
+        assert extracted.meta_description == "Original metadata."
+
+    @pytest.mark.asyncio
+    async def test_non_root_url_does_not_switch_to_english_alternate(
+        self, fetch_settings: Settings
+    ) -> None:
+        requests: list[httpx.Request] = []
+        page_html = (
+            '<html lang="ja"><head><title>Japanese Product Page</title>'
+            '<link rel="alternate" hreflang="en" href="/en/product/" />'
+            "</head><body><h1>Product</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                text=page_html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/jp/product/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        assert [request.url.path for request in requests] == ["/jp/product/"]
+        assert page.final_url == "https://example.com/jp/product/"
+
+    @pytest.mark.asyncio
     async def test_ip_pinning_host_header_and_https_sni(
         self, fetch_settings: Settings
     ) -> None:

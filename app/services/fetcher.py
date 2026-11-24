@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
+from bs4 import BeautifulSoup
 
 from app.config import Settings
-from app.exceptions import WebsiteFetchError
+from app.exceptions import InvalidURLError, SSRFBlockedError, WebsiteFetchError
+from app.services.parser import is_same_registered_domain
 from app.services.security import DNSResolver, ValidatedTarget, validate_and_resolve_url
 
 REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 ALLOWED_HTML_CONTENT_TYPES = frozenset({"text/html", "application/xhtml+xml"})
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,126 @@ def _extract_media_type(content_type_header: str | None) -> str:
     if not content_type_header:
         return ""
     return content_type_header.split(";", maxsplit=1)[0].strip().lower()
+
+
+def _is_english_language_tag(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    return value.strip().lower().replace("_", "-").split("-", maxsplit=1)[0] == "en"
+
+
+def _is_root_url(url: str) -> bool:
+    return urlsplit(url).path in {"", "/"}
+
+
+def _resolve_same_site_candidate(
+    href: object,
+    base_url: str,
+    source_url: str,
+) -> str | None:
+    if not isinstance(href, str) or not href.strip():
+        return None
+
+    try:
+        candidate_url = urljoin(base_url, href.strip())
+        candidate = urlsplit(candidate_url)
+        candidate_port = candidate.port
+        base = urlsplit(base_url)
+        source = urlsplit(source_url)
+    except ValueError:
+        return None
+
+    candidate_scheme = candidate.scheme.lower()
+    expected_port = 443 if candidate_scheme == "https" else 80
+    if (
+        candidate_scheme not in {"http", "https"}
+        or (base.scheme.lower() == "https" and candidate_scheme != "https")
+        or candidate_port not in {None, expected_port}
+        or not candidate.hostname
+        or not source.hostname
+        or not is_same_registered_domain(source.hostname, candidate.hostname)
+    ):
+        return None
+
+    return urlunsplit(
+        (
+            candidate_scheme,
+            candidate.netloc,
+            candidate.path or "/",
+            candidate.query,
+            "",
+        )
+    )
+
+
+def _find_english_alternates(
+    html: str,
+    base_url: str,
+    source_url: str,
+) -> list[tuple[str, bool]]:
+    """Return same-site English alternates, preferring hreflang over locale links."""
+    soup = BeautifulSoup(html, "html.parser")
+    candidates: list[tuple[int, int, str, bool]] = []
+    order = 0
+
+    for link in soup.find_all("link", href=True):
+        rel = link.get("rel", [])
+        rel_values = (
+            [value.lower() for value in rel if isinstance(value, str)]
+            if isinstance(rel, list)
+            else (
+                [value.lower() for value in rel.split()]
+                if isinstance(rel, str)
+                else []
+            )
+        )
+        language = link.get("hreflang")
+        if "alternate" not in rel_values or not _is_english_language_tag(language):
+            continue
+
+        alternate_url = _resolve_same_site_candidate(
+            link.get("href"), base_url, source_url
+        )
+        if alternate_url:
+            normalized_language = language.strip().lower().replace("_", "-")
+            rank = 0 if normalized_language == "en" else 1
+            candidates.append((rank, order, alternate_url, False))
+            order += 1
+
+    for anchor in soup.find_all("a", href=True):
+        if (
+            str(anchor.get("data-tracking-type", "")).strip().lower() != "regional"
+            or not _is_english_language_tag(anchor.get("lang"))
+        ):
+            continue
+
+        alternate_url = _resolve_same_site_candidate(
+            anchor.get("href"), base_url, source_url
+        )
+        if alternate_url:
+            candidates.append((2, order, alternate_url, True))
+            order += 1
+
+    candidates.sort()
+    alternates: list[tuple[str, bool]] = []
+    seen: set[str] = set()
+    for _, _, alternate_url, require_english_document in candidates:
+        if alternate_url not in seen:
+            seen.add(alternate_url)
+            alternates.append((alternate_url, require_english_document))
+    return alternates
+
+
+def _html_language_tag(html: str) -> str | None:
+    soup = BeautifulSoup(html, "html.parser")
+    if not soup.html:
+        return None
+    language = soup.html.get("lang")
+    return language if isinstance(language, str) else None
+
+
+def _html_declares_english(html: str) -> bool:
+    return _is_english_language_tag(_html_language_tag(html))
 
 
 async def _fetch_with_client(
@@ -186,6 +310,47 @@ async def _fetch_with_client(
     )
 
 
+async def _fetch_with_locale_preference(
+    client: httpx.AsyncClient,
+    url: str,
+    settings: Settings,
+    *,
+    resolver: DNSResolver | None = None,
+) -> FetchedPage:
+    page = await _fetch_with_client(client, url, settings, resolver=resolver)
+    if not _is_root_url(url) or _html_declares_english(page.html):
+        return page
+
+    for alternate_url, require_english_document in _find_english_alternates(
+        page.html, page.final_url, url
+    ):
+        try:
+            alternate_page = await _fetch_with_client(
+                client, alternate_url, settings, resolver=resolver
+            )
+        except (InvalidURLError, SSRFBlockedError, WebsiteFetchError) as exc:
+            logger.warning(
+                "Could not use advertised English locale alternate; retaining the "
+                "original page (error_code=%s).",
+                exc.error_code,
+            )
+            continue
+
+        language_tag = _html_language_tag(alternate_page.html)
+        if (
+            (require_english_document or language_tag is not None)
+            and not _is_english_language_tag(language_tag)
+        ):
+            logger.warning(
+                "Advertised English locale alternate did not return an English page; "
+                "retaining the original page."
+            )
+            continue
+        return alternate_page
+
+    return page
+
+
 async def fetch_website_html(
     url: str,
     settings: Settings,
@@ -195,7 +360,9 @@ async def fetch_website_html(
 ) -> FetchedPage:
     """Safely fetch HTML content from a public website using httpx.AsyncClient."""
     if client is not None:
-        return await _fetch_with_client(client, url, settings, resolver=resolver)
+        return await _fetch_with_locale_preference(
+            client, url, settings, resolver=resolver
+        )
 
     timeout = httpx.Timeout(settings.http_timeout_seconds)
     async with httpx.AsyncClient(
@@ -203,4 +370,6 @@ async def fetch_website_html(
         timeout=timeout,
         trust_env=False,
     ) as managed_client:
-        return await _fetch_with_client(managed_client, url, settings, resolver=resolver)
+        return await _fetch_with_locale_preference(
+            managed_client, url, settings, resolver=resolver
+        )
