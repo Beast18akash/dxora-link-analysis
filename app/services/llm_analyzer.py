@@ -33,13 +33,18 @@ Analyze the provided website content and extracted on-page SEO signals and retur
 a structured JSON response matching the exact schema provided.
 
 Mandatory output-language rule:
-- Write every AI-generated text value in all five analysis sections in English,
-  regardless of the website's language.
-- Preserve official brand names, company names, product names, and other proper
-  nouns in their original form.
-- Interpret and translate source information as needed to write the analysis in
-  English. Keep regional audience analysis grounded in localized URLs and
-  website content; output language does not determine the target market.
+- Write every free-text field in all five analysis sections in English, regardless
+  of the website's language. This includes competitor details and notes, search
+  queries, all SEO keywords and recommendations, service descriptions, and every
+  target-audience field.
+- Translate the meaning of Japanese or other non-English source text into English;
+  do not copy source-language phrases or generic terms into analysis fields.
+- Preserve the exact official spelling of brand names, company names, product names,
+  trademarks, and other proper nouns, including names officially written in Japanese.
+  Proper names are the only exception to the English-language rule; do not translate
+  or alter them unnecessarily.
+- Base geographical audience analysis on actual regional signals in the localized URL
+  and website content. English output does not imply an English-speaking target market.
 - Website metadata is extracted separately and must remain unchanged.
 
 Strict grounding and accuracy rules:
@@ -151,12 +156,17 @@ def _build_user_prompt(content: ExtractedWebsiteContent) -> str:
     serialized = json.dumps(payload, ensure_ascii=False, indent=2)
 
     return (
-        "Mandatory output-language rule: Write every AI-generated text value in all "
-        "five analysis sections in English, regardless of the website's language. "
-        "Preserve official brand, company, product, and other proper names. Interpret "
-        "regional audience signals from localized URLs and website content; output "
-        "language does not determine the target market. Extracted website metadata "
-        "must remain unchanged.\n\n"
+        "Mandatory output-language rule: Write every free-text field in all five "
+        "analysis sections in English, including competitor details and notes, search "
+        "queries, every SEO keyword/title/meta recommendation, service descriptions, "
+        "and all target-audience fields. Translate the meaning of Japanese or other "
+        "non-English source text; do not copy source-language phrases or generic terms "
+        "into analysis fields. Preserve exact official spellings of brand, company, "
+        "product, trademark, and other proper names, including Japanese-script names; "
+        "proper names are the only exception and must not be translated unnecessarily. "
+        "Use actual localized URL and website-content signals for geography; English "
+        "output does not imply an English-speaking target market. Extracted website "
+        "metadata must remain unchanged.\n\n"
         "Analyze the following extracted website data and produce all five required "
         "structured sections: competitor_vs_brand_details, top_5_target_search_queries, "
         "seo_improvements, top_5_services, and target_audience_identification.\n\n"

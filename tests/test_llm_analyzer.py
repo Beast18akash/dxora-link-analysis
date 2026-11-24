@@ -432,13 +432,19 @@ class TestAnalyzeWebsiteContent:
         japanese_content = sample_content.model_copy(
             update={
                 "final_url": "https://microsoft.com/ja-jp/",
-                "title": "マイクロソフト クラウド サービス",
+                "title": "富士通 Microsoft 365 クラウド サービス",
                 "meta_description": "日本企業向けのクラウドおよびソフトウェアサービス。",
                 "headings": ["H1: クラウドサービス"],
-                "body_text": "日本の企業にクラウドサービスと業務ソフトウェアを提供します。",
+                "body_text": (
+                    "富士通は日本の企業にMicrosoft 365とクラウドサービスを提供します。"
+                ),
             }
         )
         response_data = _valid_analysis_dict()
+        response_data["competitor_vs_brand_details"]["your_brand"]["brand_name"] = "富士通"
+        response_data["competitor_vs_brand_details"]["your_brand"][
+            "main_products_and_services"
+        ].append("Microsoft 365")
         client = _make_mock_client(
             AsyncMock(
                 return_value=_generate_content_response(json.dumps(response_data))
@@ -454,24 +460,42 @@ class TestAnalyzeWebsiteContent:
         request = client.aio.models.generate_content.await_args.kwargs
         system_instruction = request["config"]["system_instruction"].lower()
         user_prompt = request["contents"].lower()
-        assert "every ai-generated text value" in system_instruction
-        assert re.search(
-            r"in english,\s+regardless of the website's language",
-            system_instruction,
+        assert "every free-text field in all five analysis sections in english" in (
+            system_instruction
         )
-        assert "every ai-generated text value" in user_prompt
-        assert "in english, regardless of the website's language" in user_prompt
-        assert "localized urls and website content" in re.sub(
+        assert "translate the meaning of japanese or other non-english source text" in (
+            system_instruction
+        )
+        assert "proper names are the only exception" in system_instruction
+        assert "every free-text field in all five analysis sections in english" in (
+            user_prompt
+        )
+        assert "translate the meaning of japanese or other non-english source text" in (
+            user_prompt
+        )
+        assert "proper names are the only exception" in user_prompt
+        assert "actual regional signals in the localized url and website content" in re.sub(
             r"\s+", " ", system_instruction
         )
-        assert "output language does not determine the target market" in user_prompt
+        assert "english output does not imply an english-speaking target market" in (
+            user_prompt
+        )
         assert japanese_content.title in request["contents"]
         assert japanese_content.meta_description in request["contents"]
         assert "日本" in request["contents"]
 
         serialized_result = json.dumps(result.model_dump(), ensure_ascii=False)
-        assert not re.search(r"[\u3040-\u30ff\u3400-\u9fff]", serialized_result)
-        assert result.competitor_vs_brand_details.your_brand.brand_name == "Dxora Technologies"
+        generated_analysis_without_names = serialized_result.replace("富士通", "").replace(
+            "Microsoft 365", ""
+        )
+        assert not re.search(
+            r"[\u3040-\u30ff\u3400-\u9fff]", generated_analysis_without_names
+        )
+        assert result.competitor_vs_brand_details.your_brand.brand_name == "富士通"
+        assert (
+            "Microsoft 365"
+            in result.competitor_vs_brand_details.your_brand.main_products_and_services
+        )
         assert result.competitor_vs_brand_details.competitors[0].is_verified is False
 
     @pytest.mark.asyncio
@@ -1004,6 +1028,9 @@ class TestAnalyzeWebsiteContent:
         schema = LLMAnalysisResult.model_json_schema()
         defs = schema.get("$defs", {})
 
+        assert "all free text is English except exact official names" in schema[
+            "description"
+        ]
         for expected_def in (
             "CompetitorVsBrandDetails",
             "BrandProfile",
@@ -1102,15 +1129,19 @@ class TestAnalyzeWebsiteContent:
         system_lower = config["system_instruction"].lower()
         contents_lower = call_kwargs["contents"].lower()
 
-        assert "every ai-generated text value" in system_lower
-        assert re.search(
-            r"in english,\s+regardless of the website's language",
-            system_lower,
+        assert "every free-text field in all five analysis sections in english" in (
+            system_lower
         )
-        assert "localized urls and website content" in re.sub(
+        assert "translate the meaning of japanese or other non-english source text" in (
+            system_lower
+        )
+        assert "proper names are the only exception" in system_lower
+        assert "actual regional signals in the localized url and website content" in re.sub(
             r"\s+", " ", system_lower
         )
-        assert "output language does not determine the target market" in system_lower
+        assert "english output does not imply an english-speaking target market" in (
+            system_lower
+        )
         assert "business category is sufficiently clear" in system_lower
         assert "suggest at least 3 plausible competitors" in system_lower
         assert "business category is too ambiguous" in system_lower
@@ -1123,8 +1154,16 @@ class TestAnalyzeWebsiteContent:
             r"\s+", " ", system_lower
         )
 
-        assert "every ai-generated text value" in contents_lower
-        assert "in english, regardless of the website's language" in contents_lower
+        assert "every free-text field in all five analysis sections in english" in (
+            contents_lower
+        )
+        assert "translate the meaning of japanese or other non-english source text" in (
+            contents_lower
+        )
+        assert "proper names are the only exception" in contents_lower
+        assert "english output does not imply an english-speaking target market" in (
+            contents_lower
+        )
         assert "business category is clear" in contents_lower
         assert "at least 3 plausible names from general market knowledge" in contents_lower
         assert "business category is too ambiguous" in contents_lower

@@ -10,6 +10,7 @@ import pytest
 from app.config import Settings
 from app.exceptions import SSRFBlockedError, WebsiteFetchError
 from app.services.fetcher import fetch_website_html
+from app.services.parser import parse_html_content
 
 
 @pytest.fixture
@@ -78,6 +79,78 @@ class TestFetchWebsiteHtml:
         assert page.content_type in {"text/html", "application/xhtml+xml"}
 
     @pytest.mark.asyncio
+    async def test_english_accept_language_returns_english_page_when_honored(
+        self, fetch_settings: Settings
+    ) -> None:
+        captured_headers: list[str] = []
+        english_html = (
+            "<html><head><title>Global Cloud Services</title>"
+            '<meta name="description" content="Cloud services for businesses." />'
+            "</head><body><h1>Global cloud services</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_headers.append(request.headers["accept-language"])
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html"},
+                text=english_html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert captured_headers == ["en-US,en;q=0.9"]
+        assert page.final_url == "https://example.com/"
+        assert extracted.title == "Global Cloud Services"
+        assert extracted.meta_description == "Cloud services for businesses."
+
+    @pytest.mark.asyncio
+    async def test_japanese_locale_redirect_is_followed_and_preserved(
+        self, fetch_settings: Settings
+    ) -> None:
+        captured_requests: list[httpx.Request] = []
+        japanese_html = (
+            "<html><head><title>クラウド サービス</title>"
+            '<meta name="description" content="日本向けクラウドサービス。" />'
+            "</head><body><h1>クラウド サービス</h1></body></html>"
+        )
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_requests.append(request)
+            if request.url.path == "/":
+                return httpx.Response(302, headers={"Location": "/jp/"})
+            return httpx.Response(
+                200,
+                headers={"Content-Type": "text/html"},
+                text=japanese_html,
+            )
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            page = await fetch_website_html(
+                "https://example.com/",
+                fetch_settings,
+                client=client,
+                resolver=_public_resolver,
+            )
+
+        extracted = parse_html_content(page.html, page.final_url)
+        assert [request.headers["accept-language"] for request in captured_requests] == [
+            "en-US,en;q=0.9",
+            "en-US,en;q=0.9",
+        ]
+        assert page.final_url == "https://example.com/jp/"
+        assert extracted.final_url == page.final_url
+        assert extracted.title == "クラウド サービス"
+        assert extracted.meta_description == "日本向けクラウドサービス。"
+
+    @pytest.mark.asyncio
     async def test_ip_pinning_host_header_and_https_sni(
         self, fetch_settings: Settings
     ) -> None:
@@ -104,6 +177,7 @@ class TestFetchWebsiteHtml:
         assert str(req.url) == "https://93.184.216.34:8443/page?x=1"
         assert req.headers["host"] == "example.com:8443"
         assert req.headers["user-agent"] == "TestFetcher/1.0"
+        assert req.headers["accept-language"] == "en-US,en;q=0.9"
         assert req.extensions.get("sni_hostname") == "example.com"
 
     @pytest.mark.asyncio

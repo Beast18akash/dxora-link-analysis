@@ -56,7 +56,7 @@ def build_pinned_request_params(
         "Host": host_header,
         "User-Agent": user_agent,
         "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
-        "Accept-Language": "en-US,en;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
     }
 
     extensions: dict[str, object] = {}

@@ -529,7 +529,7 @@ class TargetAudienceIdentification(BaseModel):
 
 
 class LLMAnalysisResult(BaseModel):
-    """Structured LLM output containing exactly the five required analysis sections."""
+    """Five-section analysis; all free text is English except exact official names."""
 
     competitor_vs_brand_details: CompetitorVsBrandDetails
     top_5_target_search_queries: list[TargetSearchQuery] = Field(

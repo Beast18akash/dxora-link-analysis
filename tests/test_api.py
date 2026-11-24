@@ -254,18 +254,18 @@ class TestLinkAnalysisEndpoint:
         japanese_html = """<!doctype html>
         <html>
           <head>
-            <title>マイクロソフト クラウド サービス</title>
-            <meta name="description" content="日本企業向けのクラウドおよびソフトウェアサービス。" />
+            <title>富士通 Microsoft 365 クラウド サービス</title>
+            <meta name="description" content="富士通の日本企業向けクラウドサービス。" />
           </head>
           <body>
             <h1>クラウドサービス</h1>
-            <p>日本の企業にクラウドサービスと業務ソフトウェアを提供します。</p>
+            <p>富士通は日本の企業にMicrosoft 365とクラウドサービスを提供します。</p>
           </body>
         </html>
         """
         final_url = "https://microsoft.com/ja-jp/"
-        expected_title = "マイクロソフト クラウド サービス"
-        expected_description = "日本企業向けのクラウドおよびソフトウェアサービス。"
+        expected_title = "富士通 Microsoft 365 クラウド サービス"
+        expected_description = "富士通の日本企業向けクラウドサービス。"
 
         async def fake_fetcher(url: str, settings: Settings) -> FetchedPage:
             return FetchedPage(
