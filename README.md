@@ -120,13 +120,36 @@ URL Submission (POST /link-analysis)
 │   ├── test_llm_analyzer.py
 │   ├── test_parser.py
 │   └── test_security.py
+├── screenshots/
+│   ├── ss_01_microsoft_200.png
+│   ├── ss_02_invalid_url_400.png
+│   └── ss_03_ssrf_403.png
+├── evidence/
+│   ├── 01_health.json
+│   ├── 02_invalid_url_400.json
+│   ├── 03_ssrf_loopback_403.json
+│   ├── 04_ssrf_metadata_403.json
+│   ├── 05_ssrf_private_ip_403.json
+│   ├── 06_validation_error_422.json
+│   ├── 07_microsoft_200_full.json
+│   ├── 07_microsoft_200_summary.json
+│   ├── 08_salesforce_200_full.json
+│   ├── 08_salesforce_200_summary.json
+│   ├── 09_github_actions_jobs.json
+│   ├── 09_github_actions_runs.json
+│   └── 10_openapi_exact_five_schema.json
+├── .github/
+│   └── workflows/
+│       └── main.yml
 ├── metadata.json
+├── pytest.ini
 ├── .dockerignore
 ├── .env.example
 ├── .gitignore
 ├── Dockerfile
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── requirements-dev.txt
 ```
 
 ---
@@ -340,6 +363,20 @@ curl -X POST http://localhost:4000/link-analysis \
         "search_intent": "transactional",
         "business_relevance": "Captures high-intent buyers looking for outsourced API engineering delivery.",
         "target_audience": "Startup founders and product managers"
+      },
+      {
+        "query": "asynchronous Python backend development services",
+        "platforms": ["Google", "LinkedIn"],
+        "search_intent": "commercial",
+        "business_relevance": "Targets engineering teams searching for async Python expertise aligned with the FastAPI focus on the page.",
+        "target_audience": "Engineering managers and senior developers"
+      },
+      {
+        "query": "cloud-native API consulting for SaaS platforms",
+        "platforms": ["Google", "LinkedIn", "X"],
+        "search_intent": "commercial",
+        "business_relevance": "Aligns with cloud infrastructure and backend consulting offerings described in page content.",
+        "target_audience": "SaaS product and platform engineering leads"
       }
     ],
     "seo_improvements": {
@@ -383,6 +420,16 @@ curl -X POST http://localhost:4000/link-analysis \
         "source_note": "Extracted directly from the submitted website copy."
       },
       {
+        "name": "Cloud Infrastructure Architecture",
+        "description": "Design and implementation of scalable cloud infrastructure for modern engineering teams.",
+        "target_industry": "Technology and SaaS",
+        "target_customer": "Cloud architects and platform engineering leads",
+        "main_benefit": "Reliable, scalable cloud foundations for backend services.",
+        "source_type": "extracted_from_website",
+        "is_explicitly_listed": true,
+        "source_note": "Extracted directly from the submitted website copy."
+      },
+      {
         "name": "API Security & Reliability Audits",
         "description": "Structured review of API authentication, SSRF hardening, and deployment resilience.",
         "target_industry": "Technology and SaaS",
@@ -391,6 +438,26 @@ curl -X POST http://localhost:4000/link-analysis \
         "source_type": "inferred_recommendation",
         "is_explicitly_listed": false,
         "source_note": "Inferred recommendation: not explicitly listed on the submitted website."
+      },
+      {
+        "name": "DevOps & CI/CD Pipeline Setup",
+        "description": "Design and automation of CI/CD pipelines and deployment workflows.",
+        "target_industry": "Technology and SaaS",
+        "target_customer": "DevOps engineers and platform teams",
+        "main_benefit": "Faster, more reliable software delivery cycles.",
+        "source_type": "inferred_recommendation",
+        "is_explicitly_listed": false,
+        "source_note": "Inferred recommendation: not explicitly listed on the submitted website; inferred from cloud engineering category."
+      },
+      {
+        "name": "Technical Architecture Consulting",
+        "description": "Advisory on system design, technology stack selection, and scalability planning.",
+        "target_industry": "Technology and SaaS",
+        "target_customer": "CTOs and engineering managers",
+        "main_benefit": "Sound architectural decisions grounded in engineering experience.",
+        "source_type": "inferred_recommendation",
+        "is_explicitly_listed": false,
+        "source_note": "Inferred recommendation: not explicitly listed on the submitted website; inferred from backend and cloud engineering category."
       }
     ],
     "target_audience_identification": {
