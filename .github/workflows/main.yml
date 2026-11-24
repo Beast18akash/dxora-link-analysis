@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: CI
 
 on:
   push:
@@ -11,8 +11,29 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  test:
+    name: Run automated tests
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run test suite
+        run: python -m pytest -v
+
+  build-and-push:
+    name: Build and publish Docker image
+    runs-on: ubuntu-latest
+    needs: test
 
     steps:
       - name: Check out repository

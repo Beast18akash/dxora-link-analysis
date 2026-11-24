@@ -529,26 +529,31 @@ class TargetAudienceIdentification(BaseModel):
 
 
 class LLMAnalysisResult(BaseModel):
-    """Five-section analysis; all free text is English except exact official names."""
+    """Structured LLM output containing exactly the five required analysis sections."""
 
     competitor_vs_brand_details: CompetitorVsBrandDetails
     top_5_target_search_queries: list[TargetSearchQuery] = Field(
         ...,
-        min_length=1,
+        min_length=5,
         max_length=5,
         description=(
-            "Up to 5 relevant qualitative target search queries across Google, Facebook, "
-            "Instagram, LinkedIn, and X grounded in page content."
+            "Exactly 5 relevant qualitative target search queries across Google, Facebook, "
+            "Instagram, LinkedIn, and X grounded in page content. When the page content is "
+            "sparse, generate plausible queries from the available brand and category signals "
+            "and label them as AI-generated suggestions in business_relevance."
         ),
     )
     seo_improvements: SEOImprovementsSection
     top_5_services: list[ServiceItem] = Field(
         ...,
-        min_length=1,
+        min_length=5,
         max_length=5,
         description=(
-            "Up to 5 core services with explicit labeling distinguishing website-extracted "
-            "services from inferred recommendations."
+            "Exactly 5 services with explicit labeling distinguishing website-extracted "
+            "services (source_type='extracted_from_website') from inferred recommendations "
+            "(source_type='inferred_recommendation'). When the website explicitly lists fewer "
+            "than 5 services, fill remaining entries as inferred recommendations grounded in "
+            "the brand category and content. Never fabricate services as extracted."
         ),
     )
     target_audience_identification: TargetAudienceIdentification

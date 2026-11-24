@@ -79,7 +79,35 @@ def _build_valid_analysis() -> LLMAnalysisResult:
                     "search_intent": "commercial",
                     "business_relevance": "Matches the stated API and cloud platform offerings.",
                     "target_audience": "Software engineering leaders",
-                }
+                },
+                {
+                    "query": "cloud-native platform development services",
+                    "platforms": ["Google", "LinkedIn"],
+                    "search_intent": "commercial",
+                    "business_relevance": "Aligns with cloud-native platform offerings.",
+                    "target_audience": "CTOs and engineering managers",
+                },
+                {
+                    "query": "Python API backend consulting firm",
+                    "platforms": ["Google"],
+                    "search_intent": "transactional",
+                    "business_relevance": "Captures high-intent buyers for Python API work.",
+                    "target_audience": "Startup founders and product leads",
+                },
+                {
+                    "query": "asynchronous API architecture best practices",
+                    "platforms": ["Google", "X"],
+                    "search_intent": "informational",
+                    "business_relevance": "Aligns with async FastAPI focus on the page.",
+                    "target_audience": "Senior engineers and architects",
+                },
+                {
+                    "query": "hire FastAPI developer for SaaS platform",
+                    "platforms": ["Google", "LinkedIn"],
+                    "search_intent": "transactional",
+                    "business_relevance": "Targets SaaS companies seeking FastAPI expertise.",
+                    "target_audience": "SaaS product and engineering leads",
+                },
             ],
             "seo_improvements": {
                 "primary_keyword": "FastAPI API engineering consulting",
@@ -116,7 +144,47 @@ def _build_valid_analysis() -> LLMAnalysisResult:
                     "source_type": "extracted_from_website",
                     "is_explicitly_listed": True,
                     "source_note": "Extracted directly from the submitted homepage.",
-                }
+                },
+                {
+                    "name": "Cloud-Native Platform Engineering",
+                    "description": "Design and delivery of cloud-native platforms.",
+                    "target_industry": "Technology and SaaS",
+                    "target_customer": "Platform engineering teams",
+                    "main_benefit": "Scalable, resilient cloud infrastructure.",
+                    "source_type": "extracted_from_website",
+                    "is_explicitly_listed": True,
+                    "source_note": "Extracted directly from the submitted homepage.",
+                },
+                {
+                    "name": "API Security Consulting",
+                    "description": "Security review and hardening for API platforms.",
+                    "target_industry": "Technology and SaaS",
+                    "target_customer": "Security and engineering leads",
+                    "main_benefit": "Reduced API attack surface.",
+                    "source_type": "inferred_recommendation",
+                    "is_explicitly_listed": False,
+                    "source_note": "Inferred recommendation: not explicitly listed on the submitted website.",
+                },
+                {
+                    "name": "DevOps Automation",
+                    "description": "CI/CD pipeline setup and DevOps automation.",
+                    "target_industry": "Technology and SaaS",
+                    "target_customer": "DevOps and platform teams",
+                    "main_benefit": "Faster, more reliable deployments.",
+                    "source_type": "inferred_recommendation",
+                    "is_explicitly_listed": False,
+                    "source_note": "Inferred recommendation: not explicitly listed on the submitted website.",
+                },
+                {
+                    "name": "Technical Architecture Advisory",
+                    "description": "System design and technology stack advisory.",
+                    "target_industry": "Technology and SaaS",
+                    "target_customer": "CTOs and engineering managers",
+                    "main_benefit": "Sound architectural decisions.",
+                    "source_type": "inferred_recommendation",
+                    "is_explicitly_listed": False,
+                    "source_note": "Inferred recommendation: not explicitly listed on the submitted website.",
+                },
             ],
             "target_audience_identification": {
                 "primary_audiences": ["Software engineering teams"],
@@ -254,18 +322,18 @@ class TestLinkAnalysisEndpoint:
         japanese_html = """<!doctype html>
         <html>
           <head>
-            <title>富士通 Microsoft 365 クラウド サービス</title>
-            <meta name="description" content="富士通の日本企業向けクラウドサービス。" />
+            <title>マイクロソフト クラウド サービス</title>
+            <meta name="description" content="日本企業向けのクラウドおよびソフトウェアサービス。" />
           </head>
           <body>
             <h1>クラウドサービス</h1>
-            <p>富士通は日本の企業にMicrosoft 365とクラウドサービスを提供します。</p>
+            <p>日本の企業にクラウドサービスと業務ソフトウェアを提供します。</p>
           </body>
         </html>
         """
         final_url = "https://microsoft.com/ja-jp/"
-        expected_title = "富士通 Microsoft 365 クラウド サービス"
-        expected_description = "富士通の日本企業向けクラウドサービス。"
+        expected_title = "マイクロソフト クラウド サービス"
+        expected_description = "日本企業向けのクラウドおよびソフトウェアサービス。"
 
         async def fake_fetcher(url: str, settings: Settings) -> FetchedPage:
             return FetchedPage(

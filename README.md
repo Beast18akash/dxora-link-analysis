@@ -22,7 +22,7 @@ Given a single public `http` or `https` URL, the API:
 
 ## Features
 
-The features below are implemented in the current backend codebase and covered by **215 offline automated unit and API tests** (using mocked DNS, HTTP transport, and Gemini Interactions API clients):
+The features below are implemented in the current backend codebase and covered by **225 offline automated unit and API tests** (using mocked DNS, HTTP transport, and Gemini API clients):
 
 - **Website URL Analysis (`POST /link-analysis`)**: End-to-end async pipeline returning extracted page metadata alongside structured AI insights.
 
@@ -38,7 +38,7 @@ The features below are implemented in the current backend codebase and covered b
 
 - **Public Suffix List Link Classification**: Classifies internal vs. external links using `tldextract` configured completely offline (`suffix_list_urls=()`, `cache_dir=None`, `fallback_to_snapshot=True`, `include_psl_private_domains=True`) with IDNA Unicode/Punycode normalization.
 
-- **Structured Google Gemini Analysis**: Uses the official `google-genai` async SDK **Interactions API** (`client.aio.interactions.create`) with a JSON schema `response_format` (`LLMAnalysisResult.model_json_schema()`) and `store=False`, reads structured JSON from `response.output_text`, grounds prompts against fabricated competitor data, search volumes, pricing, or benchmarks, and validates every response strictly through Pydantic.
+- **Structured Google Gemini Analysis**: Uses the official `google-genai` async SDK GenerateContent API (`client.aio.models.generate_content`) with a JSON schema (`response_json_schema`) and `response_mime_type="application/json"`, reads structured JSON from `response.text`, grounds prompts against fabricated competitor data, search volumes, pricing, or benchmarks, and validates every response strictly through Pydantic.
 
 - **Consistent Error Handling & Input Validation**: Centralized domain exceptions and generic safe `RequestValidationError` handling mapped to consistent JSON `ErrorResponse` payloads with meaningful HTTP status codes and sanitized messages.
 
@@ -58,9 +58,9 @@ The features below are implemented in the current backend codebase and covered b
 
 - **HTML Parsing & Domain Classification**: BeautifulSoup4 (`>=4.12.0,<5.0.0`) & `tldextract` (`>=5.1.0,<6.0.0`)
 
-- **LLM SDK**: Official Google Gen AI Python SDK (`google-genai>=2.3.0,<3.0.0`, using the Interactions API)
+- **LLM SDK**: Official Google Gen AI Python SDK (`google-genai>=2.3.0,<3.0.0`, using the GenerateContent API)
 
-- **Testing**: `pytest` (`>=8.3.0,<9.0.0`) & `pytest-asyncio` (`>=0.24.0,<1.0.0`)
+- **Testing**: `pytest` (`>=9.0.3,<10.0.0`) & `pytest-asyncio` (`>=1.0.0,<2.0.0`) — development/test dependencies in `requirements-dev.txt`
 
 ---
 
@@ -74,7 +74,7 @@ URL Submission (POST /link-analysis)
   -> DNS Resolution (validate_and_resolve_url: off-loop DNS + all-IP public check)
   -> Secure Website Fetching (fetch_website_html: IP pinning, SNI, manual redirects, size/type caps)
   -> HTML Parsing & SEO Extraction (parse_html_content: BeautifulSoup + offline PSL link analysis)
-  -> Gemini Analysis (analyze_website_content: async google-genai Interactions API + Pydantic structured output)
+  -> Gemini Analysis (analyze_website_content: async google-genai GenerateContent API + Pydantic structured output)
   -> Structured JSON Response (LinkAnalysisResponse)
 ```
 
@@ -90,7 +90,7 @@ URL Submission (POST /link-analysis)
 | `app/services/security.py` | Syntactic URL checks, IDNA Punycode normalization, IPv4/IPv6/transition-address classification, and non-blocking DNS resolution via `asyncio.to_thread`. |
 | `app/services/fetcher.py` | Async `httpx` streaming fetcher with IP pinning, `Host`/TLS SNI preservation, manual redirect re-validation, `trust_env=False`, content-type allowlisting, and byte limits. |
 | `app/services/parser.py` | `BeautifulSoup` metadata/SEO extraction, noise removal, word-boundary truncation, and offline Mozilla PSL + IDNA internal/external link classification. |
-| `app/services/llm_analyzer.py` | Async `google-genai` Interactions API integration (`client.aio.interactions.create`, `store=False`), grounding system instructions, dual timeout enforcement (Interactions API `timeout` + `asyncio.wait_for`, default `60.0s`), `response.output_text` Pydantic JSON validation, sanitized error mapping, and async client cleanup. |
+| `app/services/llm_analyzer.py` | Async `google-genai` GenerateContent API integration (`client.aio.models.generate_content`), grounding system instructions, dual timeout enforcement (`HttpOptions` timeout + `asyncio.wait_for`, default `90.0s`), `response.text` Pydantic JSON validation, sanitized error mapping, and async client cleanup. |
 
 ---
 
@@ -166,8 +166,16 @@ python -m venv .venv
 
 ### 3. Install Dependencies
 
+For running the application only:
+
 ```bash
 pip install -r requirements.txt
+```
+
+For development and testing (includes `pytest` and `pytest-asyncio`):
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ### 4. Configure Environment Variables
@@ -203,7 +211,7 @@ All configuration settings are loaded by `app/config.py` from environment variab
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | Yes (for `/link-analysis`) | `None` | Google Gemini API key stored internally as Pydantic `SecretStr`. Missing or placeholder values return HTTP `503` (`LLM_NOT_CONFIGURED`). |
-| `GEMINI_MODEL` | Optional | `gemini-3.5-flash-lite` | Gemini model ID used for Interactions API structured analysis. Both `app/config.py` and `.env.example` default to `gemini-3.5-flash-lite`; empty values or the placeholder `REPLACE_WITH_SUPPORTED_MODEL_ID` are rejected with HTTP `503` (`LLM_NOT_CONFIGURED`). |
+| `GEMINI_MODEL` | Optional | `gemini-3.5-flash-lite` | Gemini model ID used for GenerateContent structured analysis. Both `app/config.py` and `.env.example` default to `gemini-3.5-flash-lite`; empty values or the placeholder `REPLACE_WITH_SUPPORTED_MODEL_ID` are rejected with HTTP `503` (`LLM_NOT_CONFIGURED`). |
 | `APP_NAME` | No | `AI-Powered Website Link Analysis API` | Service title exposed in OpenAPI metadata and `/health`. |
 | `APP_VERSION` | No | `1.0.0` | Service version exposed in OpenAPI metadata and `/health`. |
 | `HTTP_TIMEOUT_SECONDS` | No | `10.0` | Timeout in seconds (`0 < x <= 60`) for fetching target websites. |
@@ -437,7 +445,7 @@ python -m pytest -v
 
 ### Automated Test Coverage
 
-The test suite includes **215 automated unit and API tests** across five modules:
+The test suite includes **225 automated unit and API tests** across five modules:
 
 - `tests/test_security.py` (88 tests): URL syntax, schemes, credentials, local domains, IPv4/IPv6/transition IP filtering, DNS errors, IDNA Punycode normalization, malformed IPv6 & zone identifiers, and DNS rebinding scenarios.
 
@@ -445,12 +453,12 @@ The test suite includes **215 automated unit and API tests** across five modules
 
 - `tests/test_parser.py` (22 tests): Metadata, SEO signals, noise stripping, heading caps, text truncation/validation, malformed HTML, invalid canonical URLs, IDNA links, and offline `tldextract` PSL behavior.
 
-- `tests/test_llm_analyzer.py` (54 tests): Mocked async `google-genai` Interactions API (`client.aio.interactions.create`) responses parsed from `response.output_text`, full five-section Pydantic schema validation (including Section 1 competitor verification and empty strengths/weaknesses enforcement for unverified suggestions, Section 2 five-platform enum coverage, Section 3 keyword/title/meta/content/technical SEO fields, Section 4 extracted-vs-inferred service consistency, Section 5 complete target audience fields with explicit vs. inferred geographical focus validation, and recursive Interactions API JSON Schema compatibility), prompt rule checks, missing/placeholder configuration, timeouts, sanitized `APIError` mapping (`429`, `401`/`403`, `404`, `503`, `504`, `500`), empty/malformed/invalid JSON payloads, and owned vs. injected client cleanup.
+- `tests/test_llm_analyzer.py` (63 tests): Mocked async `google-genai` GenerateContent API (`client.aio.models.generate_content`) responses parsed from `response.text`, full five-section Pydantic schema validation (including Section 1 competitor verification and empty strengths/weaknesses enforcement for unverified suggestions, Section 2 exact-five-query enforcement and five-platform enum coverage, Section 3 keyword/title/meta/content/technical SEO fields, Section 4 exact-five-service enforcement and extracted-vs-inferred service consistency, Section 5 complete target audience fields with explicit vs. inferred geographical focus validation, and recursive GenerateContent JSON Schema compatibility), prompt rule checks, missing/placeholder configuration, timeouts, sanitized `APIError` mapping (`429`, `401`/`403`, `404`, `503`, `504`, `500`), empty/malformed/invalid JSON payloads, and owned vs. injected client cleanup.
 
-- `tests/test_api.py` (22 tests): FastAPI `TestClient` integration tests for `GET /health`, `POST /link-analysis`, generic safe `422` validation errors, domain error mappings, and sanitized `500` responses using dependency overrides.
+- `tests/test_api.py` (23 tests): FastAPI `TestClient` integration tests for `GET /health`, `POST /link-analysis`, generic safe `422` validation errors, domain error mappings, and sanitized `500` responses using dependency overrides.
 
 > **Verification scope**:
-> - **Automated offline suite (independently run locally)**: `215 passed, 0 failed` with one upstream Starlette `TestClient` deprecation warning, using mocked DNS, HTTP transport, and Gemini Interactions API clients for determinism and speed.
+> - **Automated offline suite (independently run locally)**: `225 passed, 0 failed` with one upstream Starlette `TestClient` deprecation warning, using mocked DNS, HTTP transport, and Gemini API clients for determinism and speed.
 > - **Manual live integration tests**: The expanded five-section analysis was successfully tested through Swagger UI against Microsoft (`HTTP 200`) and Salesforce (`HTTP 200`). Shopify returned `HTTP 502` because the target website rejected the fetch with `HTTP 403`; this is recorded as an upstream access restriction, not a successful analysis.
 > - **Performance benchmarking**: No live cross-provider latency or accuracy benchmark has been executed.
 
@@ -463,13 +471,13 @@ The test suite includes **215 automated unit and API tests** across five modules
 > **Evidence Distinction**:
 > - **Published provider specifications**: Pricing (per 1M tokens), context windows, and native structured JSON output capabilities are sourced directly from official provider documentation on `2026-11-21`.
 > - **Estimated performance & cost**: Per-analysis token volumes, USD costs, and expected latency ranges are analytical estimates derived from this backend's payload caps (`MAX_EXTRACTED_TEXT_CHARS=10000`) and five-section JSON schema.
-> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. The automated suite (`215 passed`) uses mocked DNS, HTTP transport, and Gemini clients. Separately, manual live end-to-end tests of the expanded five-section schema returned HTTP 200 for Microsoft and Salesforce; Shopify was blocked by an upstream HTTP 403.
+> - **Measured performance**: No live cross-provider latency or accuracy benchmark was executed in this environment. The automated suite (`225 passed`) uses mocked DNS, HTTP transport, and Gemini clients. Separately, manual live end-to-end tests of the expanded five-section schema returned HTTP 200 for Microsoft and Salesforce; Shopify was blocked by an upstream HTTP 403.
 
 ### Model Comparison (Published Provider Specifications)
 
 | Provider | Model Name | Input Token Pricing (per 1M) | Output Token Pricing (per 1M) | Response Speed (Published Tier / Estimated) | Accuracy & Suitability for 5-Section SEO/Brand Analysis | Context Window | Structured JSON Support | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **Google** | `gemini-3.5-flash-lite` *(currently implemented)* | `$0.30` (cached read `$0.03`) | `$2.50` *(includes thinking tokens)* | Fast (Flash-Lite tier; estimated ~3–10s end-to-end) | Strong instruction following and grounding for multi-section extraction + SEO/marketing synthesis; native `google-genai` Interactions API support | `1,048,576` (1M) | Native JSON Schema (`response_format`) | **Recommended Primary** (retain current default) |
+| **Google** | `gemini-3.5-flash-lite` *(currently implemented)* | `$0.30` (cached read `$0.03`) | `$2.50` *(includes thinking tokens)* | Fast (Flash-Lite tier; estimated ~3–10s end-to-end) | Strong instruction following and grounding for multi-section extraction + SEO/marketing synthesis; native `google-genai` GenerateContent API support | `1,048,576` (1M) | Native JSON Schema (`response_json_schema`) | **Recommended Primary** (retain current default) |
 | **Google** | `gemini-3.1-flash-lite` | `$0.25` (cached read `$0.025`) | `$1.50` | Fast (Flash-Lite tier; estimated ~2–8s end-to-end) | High suitability for high-volume, cost-sensitive structured extraction with slightly lower output token cost | `1,048,576` (1M) | Native JSON Schema (`response_format`) | **Primary Fallback (Same SDK)** via `GEMINI_MODEL` env var |
 | **OpenAI** | `gpt-5.4-mini` *(active)* | `$0.75` (cached `$0.075`) | `$4.50` | Fast–Moderate (reasoning mini tier; estimated ~4–12s) | Strong reasoning and strict schema adherence via Structured Outputs; currently supported OpenAI mini-tier model | `400,000` | Native Structured Outputs (`json_schema`, strict mode) | **Cross-Provider Fallback** (requires OpenAI adapter; higher cost than Gemini/Haiku) |
 | **Anthropic** | `claude-haiku-5-5` | `$0.10` ($\le$ 100K) / `$0.50` (>100K) | `$0.50` ($\le$ 100K) / `$2.50` (>100K) | Very Fast (Haiku tier; estimated ~2–7s) | Very cost-efficient under 100K prompt context with strong extraction faithfulness and native JSON schema support | `1,000,000` (1M) | Native Structured Outputs (`output_config.format`) | **Lowest-Cost Cross-Provider Option** (requires Anthropic adapter) |
@@ -506,7 +514,7 @@ Because `app/config.py` caps extracted body text at `MAX_EXTRACTED_TEXT_CHARS=10
 ### Final Model Recommendation & Fallback Strategy
 
 - **Recommended Primary Model**: **`gemini-3.5-flash-lite`** (kept as the configured default in `app/config.py` and `.env.example`).
-  - **Why selected**: Already integrated and verified with the official `google-genai` async Interactions API (`client.aio.interactions.create`), supports native JSON Schema enforcement (`LLMAnalysisResult.model_json_schema()`) with `store=False`, provides a `1M`-token context window with low `$0.30/1M` input pricing, avoids unnecessary refactoring or SDK churn, and handles complex five-section grounding rules reliably.
+  - **Why selected**: Already integrated and verified with the official `google-genai` async GenerateContent API (`client.aio.models.generate_content`), supports native JSON Schema enforcement (`LLMAnalysisResult.model_json_schema()`) via `response_json_schema`, provides a `1M`-token context window with low `$0.30/1M` input pricing, avoids unnecessary refactoring or SDK churn, and handles complex five-section grounding rules reliably.
 - **Alternative Fallback Model**:
   - **Immediate zero-code fallback (same SDK)**: **`gemini-3.1-flash-lite`** via the `GEMINI_MODEL` environment variable (`~35%` lower estimated cost per analysis when high throughput or tighter budget is prioritized).
   - **Cross-provider fallback**: **`claude-haiku-5-5`** (lowest unit cost under 100K prompt tokens) or **`gpt-5.4-mini`** (currently supported OpenAI mini tier; `gpt-5-mini` should not be adopted due to its December 11, 2026 shutdown) if multi-cloud vendor redundancy is required in a future release.
@@ -515,7 +523,7 @@ Because `app/config.py` caps extracted body text at `MAX_EXTRACTED_TEXT_CHARS=10
 
 1. **Bounded HTML Extraction (Implemented)**: `MAX_HTML_BYTES=2097152` and `MAX_EXTRACTED_TEXT_CHARS=10000`, along with stripping scripts/styles/SVGs and capping headings at 30, prevent oversized pages from inflating input token bills.
 2. **Pre-LLM Rejection (Implemented)**: Invalid URLs, SSRF targets, non-HTML content types, and empty-text pages fail fast (`400`/`403`/`415`/`422`) before any paid LLM call is made.
-3. **Stateless Interactions (`store=False`, Implemented)**: Prevents unnecessary server-side interaction state accumulation.
+3. **Stateless Requests (Implemented)**: The GenerateContent API is called without server-side state storage, keeping each request isolated.
 4. **Prompt / Context Caching (Recommended for Scale)**: Cache the static `SYSTEM_INSTRUCTION` and JSON schema prefix where supported (cached input reads drop from `$0.30` to `$0.03` per 1M tokens on Gemini).
 5. **URL-Keyed Response Caching (Recommended for Scale)**: Cache structured `LinkAnalysisResponse` payloads in Redis for a short TTL (e.g., 15–60 minutes) keyed by normalized `final_url` to avoid paying twice for repeated submissions.
 6. **Runtime Model Tiering**: Use `GEMINI_MODEL=gemini-3.1-flash-lite` for high-volume batch or free-tier workloads while reserving `gemini-3.5-flash-lite` for standard interactive analysis.
@@ -561,9 +569,9 @@ Implemented controls in the backend:
 
 - **Manual Redirect Re-Validation**: Forces `follow_redirects=False` per request and re-runs URL/DNS/IP validation on every `Location` header up to `MAX_REDIRECTS`.
 
-- **Network Path & Resource Limits**: Disables environment proxy inheritance (`trust_env=False`) on managed `httpx` clients, enforces HTML `Content-Type` allowlisting, streaming byte caps (`MAX_HTML_BYTES`), fetch timeouts (`HTTP_TIMEOUT_SECONDS`), and LLM request deadlines (Interactions API `timeout` + `asyncio.wait_for`, default `60.0s`).
+- **Network Path & Resource Limits**: Disables environment proxy inheritance (`trust_env=False`) on managed `httpx` clients, enforces HTML `Content-Type` allowlisting, streaming byte caps (`MAX_HTML_BYTES`), fetch timeouts (`HTTP_TIMEOUT_SECONDS`), and LLM request deadlines (`HttpOptions` timeout + `asyncio.wait_for`, default `90.0s`).
 
-- **Secret Handling, Safe Errors & Prompt Separation**: Stores `GEMINI_API_KEY` as `SecretStr`, disables server-side interaction storage (`store=False`), returns generic safe messages for validation and unexpected errors, sanitizes upstream Gemini error messages and validation logs so keys and internal details are never returned to clients, and delimits untrusted website data in `<website_content>` tags.
+- **Secret Handling, Safe Errors & Prompt Separation**: Stores `GEMINI_API_KEY` as `SecretStr`, returns generic safe messages for validation and unexpected errors, sanitizes upstream Gemini error messages and validation logs so keys and internal details are never returned to clients, and delimits untrusted website data in `<website_content>` tags.
 
 **Security scope limitations (not currently implemented)**:
 
@@ -642,7 +650,7 @@ The `Dockerfile` runs as a non-root user (`appuser`), defaults to port `4000` wh
 
 The backend codebase, five-section schemas, grounding prompts, automated tests, local Docker verification, live local API tests, and LLM research documentation are complete. The following items remain before final submission:
 
-- [x] **Automated Test Suite**: Independently run locally with `python -m pytest -v` — `215 passed, 0 failed, 1 warning`.
+- [x] **Automated Test Suite**: Independently run locally with `python -m pytest -v` — `225 passed, 0 failed, 1 warning`.
 - [x] **Live Five-Section API Tests (Local)**: Microsoft and Salesforce returned HTTP `200`; Shopify returned HTTP `502` because the target site returned HTTP `403`.
 - [x] **Build & Smoke-Test Docker Container Locally**: Docker image built and container started successfully; container reported healthy status, `GET /health` returned HTTP `200`, and `/docs` loaded successfully.
 - [x] **Push to Public GitHub Repository**: Repository published at https://github.com/Beast18akash/dxora-link-analysis.

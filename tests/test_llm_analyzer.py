@@ -146,6 +146,25 @@ def _valid_analysis_dict() -> dict:
                 ),
                 "target_audience": "Data engineering leaders and SaaS founders",
             },
+            {
+                "query": "Python API development agency for startups",
+                "platforms": ["Google", "LinkedIn"],
+                "search_intent": "transactional",
+                "business_relevance": (
+                    "Captures high-intent startup buyers seeking outsourced Python "
+                    "API engineering; grounded in brand category."
+                ),
+                "target_audience": "Startup founders and product managers",
+            },
+            {
+                "query": "asynchronous backend architecture consulting",
+                "platforms": ["Google", "X"],
+                "search_intent": "informational",
+                "business_relevance": (
+                    "Aligns with the asynchronous FastAPI focus described in body copy."
+                ),
+                "target_audience": "Senior engineers and engineering leads",
+            },
         ],
         "seo_improvements": {
             "primary_keyword": "FastAPI backend engineering consulting",
@@ -215,6 +234,54 @@ def _valid_analysis_dict() -> dict:
                 "source_type": "extracted_from_website",
                 "is_explicitly_listed": True,
                 "source_note": "Extracted directly from the website body copy.",
+            },
+            {
+                "name": "API Security & Performance Audits",
+                "description": (
+                    "Structured review of API authentication, SSRF hardening, and "
+                    "deployment resilience recommended based on backend engineering focus."
+                ),
+                "target_industry": "Technology and SaaS",
+                "target_customer": "Engineering and security leads",
+                "main_benefit": "Early identification of architectural and security risks.",
+                "source_type": "inferred_recommendation",
+                "is_explicitly_listed": False,
+                "source_note": (
+                    "Inferred recommendation: not explicitly listed on the submitted website; "
+                    "inferred from backend engineering category."
+                ),
+            },
+            {
+                "name": "DevOps & CI/CD Pipeline Setup",
+                "description": (
+                    "Design and implementation of CI/CD pipelines and DevOps automation "
+                    "recommended based on cloud infrastructure focus."
+                ),
+                "target_industry": "Technology and SaaS",
+                "target_customer": "DevOps engineers and platform teams",
+                "main_benefit": "Faster, more reliable software delivery cycles.",
+                "source_type": "inferred_recommendation",
+                "is_explicitly_listed": False,
+                "source_note": (
+                    "Inferred recommendation: not explicitly listed on the submitted website; "
+                    "inferred from cloud infrastructure engineering category."
+                ),
+            },
+            {
+                "name": "Technical Architecture Consulting",
+                "description": (
+                    "Advisory on system design and technology stack selection for "
+                    "engineering teams."
+                ),
+                "target_industry": "Technology and SaaS",
+                "target_customer": "CTOs and engineering managers",
+                "main_benefit": "Sound architectural decisions grounded in engineering experience.",
+                "source_type": "inferred_recommendation",
+                "is_explicitly_listed": False,
+                "source_note": (
+                    "Inferred recommendation: not explicitly listed on the submitted website; "
+                    "inferred from backend and cloud engineering category."
+                ),
             },
         ],
         "target_audience_identification": {
@@ -373,7 +440,7 @@ class TestAnalyzeWebsiteContent:
         assert len(section_1.competitive_advantages) == 1
         assert len(section_1.positioning_opportunities) == 1
         assert "unverified" in section_1.grounding_notes.lower()
-        assert len(result.top_5_services) == 2
+        assert len(result.top_5_services) == 5
 
         # An injected client must not be closed by the analyzer.
         client.aio.aclose.assert_not_awaited()
@@ -432,19 +499,13 @@ class TestAnalyzeWebsiteContent:
         japanese_content = sample_content.model_copy(
             update={
                 "final_url": "https://microsoft.com/ja-jp/",
-                "title": "富士通 Microsoft 365 クラウド サービス",
+                "title": "マイクロソフト クラウド サービス",
                 "meta_description": "日本企業向けのクラウドおよびソフトウェアサービス。",
                 "headings": ["H1: クラウドサービス"],
-                "body_text": (
-                    "富士通は日本の企業にMicrosoft 365とクラウドサービスを提供します。"
-                ),
+                "body_text": "日本の企業にクラウドサービスと業務ソフトウェアを提供します。",
             }
         )
         response_data = _valid_analysis_dict()
-        response_data["competitor_vs_brand_details"]["your_brand"]["brand_name"] = "富士通"
-        response_data["competitor_vs_brand_details"]["your_brand"][
-            "main_products_and_services"
-        ].append("Microsoft 365")
         client = _make_mock_client(
             AsyncMock(
                 return_value=_generate_content_response(json.dumps(response_data))
@@ -460,42 +521,24 @@ class TestAnalyzeWebsiteContent:
         request = client.aio.models.generate_content.await_args.kwargs
         system_instruction = request["config"]["system_instruction"].lower()
         user_prompt = request["contents"].lower()
-        assert "every free-text field in all five analysis sections in english" in (
-            system_instruction
+        assert "every ai-generated text value" in system_instruction
+        assert re.search(
+            r"in english,\s+regardless of the website's language",
+            system_instruction,
         )
-        assert "translate the meaning of japanese or other non-english source text" in (
-            system_instruction
-        )
-        assert "proper names are the only exception" in system_instruction
-        assert "every free-text field in all five analysis sections in english" in (
-            user_prompt
-        )
-        assert "translate the meaning of japanese or other non-english source text" in (
-            user_prompt
-        )
-        assert "proper names are the only exception" in user_prompt
-        assert "actual regional signals in the localized url and website content" in re.sub(
+        assert "every ai-generated text value" in user_prompt
+        assert "in english, regardless of the website's language" in user_prompt
+        assert "localized urls and website content" in re.sub(
             r"\s+", " ", system_instruction
         )
-        assert "english output does not imply an english-speaking target market" in (
-            user_prompt
-        )
+        assert "output language does not determine the target market" in user_prompt
         assert japanese_content.title in request["contents"]
         assert japanese_content.meta_description in request["contents"]
         assert "日本" in request["contents"]
 
         serialized_result = json.dumps(result.model_dump(), ensure_ascii=False)
-        generated_analysis_without_names = serialized_result.replace("富士通", "").replace(
-            "Microsoft 365", ""
-        )
-        assert not re.search(
-            r"[\u3040-\u30ff\u3400-\u9fff]", generated_analysis_without_names
-        )
-        assert result.competitor_vs_brand_details.your_brand.brand_name == "富士通"
-        assert (
-            "Microsoft 365"
-            in result.competitor_vs_brand_details.your_brand.main_products_and_services
-        )
+        assert not re.search(r"[\u3040-\u30ff\u3400-\u9fff]", serialized_result)
+        assert result.competitor_vs_brand_details.your_brand.brand_name == "Dxora Technologies"
         assert result.competitor_vs_brand_details.competitors[0].is_verified is False
 
     @pytest.mark.asyncio
@@ -772,6 +815,61 @@ class TestAnalyzeWebsiteContent:
         assert exc_info.value.error_code == "LLM_INVALID_RESPONSE"
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("field", "count", "description"),
+        [
+            ("top_5_target_search_queries", 4, "four queries (fewer than required 5)"),
+            ("top_5_target_search_queries", 6, "six queries (more than allowed 5)"),
+            ("top_5_services", 4, "four services (fewer than required 5)"),
+            ("top_5_services", 6, "six services (more than allowed 5)"),
+        ],
+    )
+    async def test_wrong_count_in_exact_five_fields_rejected(
+        self,
+        sample_content: ExtractedWebsiteContent,
+        valid_settings: Settings,
+        field: str,
+        count: int,
+        description: str,
+    ) -> None:
+        payload = _valid_analysis_dict()
+        if field == "top_5_target_search_queries":
+            query_template = {
+                "query": "example query",
+                "platforms": ["Google"],
+                "search_intent": "informational",
+                "business_relevance": "Aligns with brand category.",
+                "target_audience": "General audience",
+            }
+            payload[field] = [dict(query_template, query=f"Query {i}") for i in range(count)]
+        else:
+            service_template = {
+                "name": "Service",
+                "description": "Desc",
+                "target_industry": "Technology",
+                "target_customer": "Engineering teams",
+                "main_benefit": "Improved delivery",
+                "source_type": "extracted_from_website",
+                "is_explicitly_listed": True,
+                "source_note": "Extracted from website.",
+            }
+            payload[field] = [dict(service_template, name=f"Service {i}") for i in range(count)]
+
+        client = _make_mock_client(
+            AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
+        )
+        with pytest.raises(LLMServiceError) as exc_info:
+            await analyze_website_content(
+                sample_content,
+                valid_settings,
+                client=client,
+            )
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "LLM_INVALID_RESPONSE", (
+            f"Expected LLM_INVALID_RESPONSE for {description}"
+        )
+
+    @pytest.mark.asyncio
     async def test_owned_client_closed_on_success_and_error(
         self,
         sample_content: ExtractedWebsiteContent,
@@ -1028,9 +1126,6 @@ class TestAnalyzeWebsiteContent:
         schema = LLMAnalysisResult.model_json_schema()
         defs = schema.get("$defs", {})
 
-        assert "all free text is English except exact official names" in schema[
-            "description"
-        ]
         for expected_def in (
             "CompetitorVsBrandDetails",
             "BrandProfile",
@@ -1129,19 +1224,15 @@ class TestAnalyzeWebsiteContent:
         system_lower = config["system_instruction"].lower()
         contents_lower = call_kwargs["contents"].lower()
 
-        assert "every free-text field in all five analysis sections in english" in (
-            system_lower
+        assert "every ai-generated text value" in system_lower
+        assert re.search(
+            r"in english,\s+regardless of the website's language",
+            system_lower,
         )
-        assert "translate the meaning of japanese or other non-english source text" in (
-            system_lower
-        )
-        assert "proper names are the only exception" in system_lower
-        assert "actual regional signals in the localized url and website content" in re.sub(
+        assert "localized urls and website content" in re.sub(
             r"\s+", " ", system_lower
         )
-        assert "english output does not imply an english-speaking target market" in (
-            system_lower
-        )
+        assert "output language does not determine the target market" in system_lower
         assert "business category is sufficiently clear" in system_lower
         assert "suggest at least 3 plausible competitors" in system_lower
         assert "business category is too ambiguous" in system_lower
@@ -1154,16 +1245,8 @@ class TestAnalyzeWebsiteContent:
             r"\s+", " ", system_lower
         )
 
-        assert "every free-text field in all five analysis sections in english" in (
-            contents_lower
-        )
-        assert "translate the meaning of japanese or other non-english source text" in (
-            contents_lower
-        )
-        assert "proper names are the only exception" in contents_lower
-        assert "english output does not imply an english-speaking target market" in (
-            contents_lower
-        )
+        assert "every ai-generated text value" in contents_lower
+        assert "in english, regardless of the website's language" in contents_lower
         assert "business category is clear" in contents_lower
         assert "at least 3 plausible names from general market knowledge" in contents_lower
         assert "business category is too ambiguous" in contents_lower
@@ -1175,7 +1258,7 @@ class TestAnalyzeWebsiteContent:
 
         # Verify Sections 2–5 prompt coverage.
         for expected_phrase in (
-            "google, facebook, instagram, linkedin",
+            "facebook, instagram, linkedin, and x",
             "never invent search volumes",
             "primary_keyword",
             "recommended_seo_title",
@@ -1197,15 +1280,15 @@ class TestAnalyzeWebsiteContent:
         valid_settings: Settings,
     ) -> None:
         payload = _valid_analysis_dict()
-        payload["top_5_target_search_queries"] = [
-            {
-                "query": "FastAPI cloud engineering",
-                "platforms": ["Google", "Facebook", "Instagram", "LinkedIn", "X"],
-                "search_intent": "commercial",
-                "business_relevance": "Directly reflects the core offerings.",
-                "target_audience": "Engineering leaders",
-            }
-        ]
+        # Replace the first query with one that uses all five platforms; keep the
+        # other four to satisfy the exact-five requirement.
+        payload["top_5_target_search_queries"][0] = {
+            "query": "FastAPI cloud engineering",
+            "platforms": ["Google", "Facebook", "Instagram", "LinkedIn", "X"],
+            "search_intent": "commercial",
+            "business_relevance": "Directly reflects the core offerings.",
+            "target_audience": "Engineering leaders",
+        }
         client = _make_mock_client(
             AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
@@ -1283,19 +1366,9 @@ class TestAnalyzeWebsiteContent:
         sample_content: ExtractedWebsiteContent,
         valid_settings: Settings,
     ) -> None:
+        # _valid_analysis_dict already contains 5 services (2 extracted + 3 inferred).
+        # Verify the schema correctly classifies extracted vs. inferred entries.
         payload = _valid_analysis_dict()
-        payload["top_5_services"].append(
-            {
-                "name": "API Security & Performance Audits",
-                "description": "Recommended adjacent audit offering aligned with backend work.",
-                "target_industry": "Technology and SaaS",
-                "target_customer": "Security-conscious engineering teams",
-                "main_benefit": "Identifies reliability and security bottlenecks early.",
-                "source_type": "inferred_recommendation",
-                "is_explicitly_listed": False,
-                "source_note": "Inferred recommendation: not explicitly listed on the submitted page.",
-            }
-        )
         client = _make_mock_client(
             AsyncMock(return_value=_generate_content_response(json.dumps(payload)))
         )
@@ -1305,7 +1378,7 @@ class TestAnalyzeWebsiteContent:
             valid_settings,
             client=client,
         )
-        assert len(result.top_5_services) == 3
+        assert len(result.top_5_services) == 5
         assert (
             result.top_5_services[0].source_type
             == ServiceSourceType.EXTRACTED_FROM_WEBSITE

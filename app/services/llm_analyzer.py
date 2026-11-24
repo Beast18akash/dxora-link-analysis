@@ -33,18 +33,13 @@ Analyze the provided website content and extracted on-page SEO signals and retur
 a structured JSON response matching the exact schema provided.
 
 Mandatory output-language rule:
-- Write every free-text field in all five analysis sections in English, regardless
-  of the website's language. This includes competitor details and notes, search
-  queries, all SEO keywords and recommendations, service descriptions, and every
-  target-audience field.
-- Translate the meaning of Japanese or other non-English source text into English;
-  do not copy source-language phrases or generic terms into analysis fields.
-- Preserve the exact official spelling of brand names, company names, product names,
-  trademarks, and other proper nouns, including names officially written in Japanese.
-  Proper names are the only exception to the English-language rule; do not translate
-  or alter them unnecessarily.
-- Base geographical audience analysis on actual regional signals in the localized URL
-  and website content. English output does not imply an English-speaking target market.
+- Write every AI-generated text value in all five analysis sections in English,
+  regardless of the website's language.
+- Preserve official brand names, company names, product names, and other proper
+  nouns in their original form.
+- Interpret and translate source information as needed to write the analysis in
+  English. Keep regional audience analysis grounded in localized URLs and
+  website content; output language does not determine the target market.
 - Website metadata is extracted separately and must remain unchanged.
 
 Strict grounding and accuracy rules:
@@ -88,12 +83,14 @@ Strict grounding and accuracy rules:
      and unverified AI-generated suggestions, and state whether competitor
      details were verified or unverified.
 5. For top_5_target_search_queries (Section 2 — Top 5 Target Search Queries):
-   - Produce up to 5 (ideally 5 where page content supports them) relevant,
-     qualitative search queries spanning Google, Facebook, Instagram, LinkedIn,
-     and X as appropriate for the brand.
+   - Produce EXACTLY 5 relevant, qualitative search queries spanning Google,
+     Facebook, Instagram, LinkedIn, and X as appropriate for the brand.
    - For every query, specify platforms (using only "Google", "Facebook",
      "Instagram", "LinkedIn", "X"), search_intent, business_relevance, and
      target_audience.
+   - If the page content is sparse, derive queries from available brand signals
+     and category knowledge. Label inferred or category-derived queries as such
+     in business_relevance.
    - NEVER invent search volumes, keyword rankings, click-through rates, or
      advertising metrics.
 6. For seo_improvements (Section 3 — SEO Improvements):
@@ -105,16 +102,18 @@ Strict grounding and accuracy rules:
      seo_signals (title, meta description, canonical, headings, image alt text,
      links, and content depth).
 7. For top_5_services (Section 4 — Top 5 Services):
-   - Return between 1 and 5 services with name, description, target_industry,
+   - Return EXACTLY 5 services with name, description, target_industry,
      target_customer, main_benefit, source_type, is_explicitly_listed, and
      source_note.
    - Set source_type="extracted_from_website" and is_explicitly_listed=true
      ONLY for services explicitly described in <website_content>.
-   - If you include an inferred or recommended adjacent service not explicitly
-     listed on the website, you MUST set source_type="inferred_recommendation"
-     and is_explicitly_listed=false, and state this clearly in source_note.
-   - Never invent or misrepresent inferred recommendations as actual listed
-     website services, and do not pad to 5 when fewer offerings are warranted.
+   - If fewer than 5 services are explicitly listed on the website, fill the
+     remaining entries as inferred recommendations grounded in the brand's
+     category and content. For every such entry, set
+     source_type="inferred_recommendation" and is_explicitly_listed=false,
+     and state clearly in source_note that it is an inferred recommendation.
+   - Never fabricate or misrepresent inferred recommendations as actual listed
+     website services. Never pad with duplicate or trivially renamed services.
 8. For target_audience_identification (Section 5 — Target Audience Identification):
    - Provide primary_audiences, secondary_audiences, industry_segments,
      business_types, customer_profiles, geographical_focus,
@@ -156,17 +155,12 @@ def _build_user_prompt(content: ExtractedWebsiteContent) -> str:
     serialized = json.dumps(payload, ensure_ascii=False, indent=2)
 
     return (
-        "Mandatory output-language rule: Write every free-text field in all five "
-        "analysis sections in English, including competitor details and notes, search "
-        "queries, every SEO keyword/title/meta recommendation, service descriptions, "
-        "and all target-audience fields. Translate the meaning of Japanese or other "
-        "non-English source text; do not copy source-language phrases or generic terms "
-        "into analysis fields. Preserve exact official spellings of brand, company, "
-        "product, trademark, and other proper names, including Japanese-script names; "
-        "proper names are the only exception and must not be translated unnecessarily. "
-        "Use actual localized URL and website-content signals for geography; English "
-        "output does not imply an English-speaking target market. Extracted website "
-        "metadata must remain unchanged.\n\n"
+        "Mandatory output-language rule: Write every AI-generated text value in all "
+        "five analysis sections in English, regardless of the website's language. "
+        "Preserve official brand, company, product, and other proper names. Interpret "
+        "regional audience signals from localized URLs and website content; output "
+        "language does not determine the target market. Extracted website metadata "
+        "must remain unchanged.\n\n"
         "Analyze the following extracted website data and produce all five required "
         "structured sections: competitor_vs_brand_details, top_5_target_search_queries, "
         "seo_improvements, top_5_services, and target_audience_identification.\n\n"
@@ -187,21 +181,24 @@ def _build_user_prompt(content: ExtractedWebsiteContent) -> str:
         "- Provide competitive_advantages, positioning_opportunities, and grounding_notes "
         "clearly distinguishing extracted facts, inferences, and suggestions.\n\n"
         "Section 2 — top_5_target_search_queries:\n"
-        "- Provide up to 5 relevant search queries spanning Google, Facebook, Instagram, "
+        "- Provide EXACTLY 5 relevant search queries spanning Google, Facebook, Instagram, "
         "LinkedIn, and X where applicable, with platforms, search_intent, "
-        "business_relevance, and target_audience. Never invent search volumes or rankings.\n\n"
+        "business_relevance, and target_audience. If page content is sparse, derive "
+        "queries from available brand and category signals and note this in "
+        "business_relevance. Never invent search volumes or rankings.\n\n"
         "Section 3 — seo_improvements:\n"
         "- Provide primary_keyword, secondary_keywords, long_tail_keywords, "
         "business_keywords, recommended_seo_title, primary_keyword_integration, "
         "recommended_meta_description, supporting_content_recommendations, and "
         "technical_seo_improvements grounded in extracted metadata and seo_signals.\n\n"
         "Section 4 — top_5_services:\n"
-        "- Provide up to 5 services with name, description, target_industry, "
+        "- Provide EXACTLY 5 services with name, description, target_industry, "
         "target_customer, main_benefit, source_type, is_explicitly_listed, and "
         "source_note. Mark only explicitly described offerings as "
-        "source_type='extracted_from_website' with is_explicitly_listed=true; label any "
-        "inferred suggestions as source_type='inferred_recommendation' with "
-        "is_explicitly_listed=false.\n\n"
+        "source_type='extracted_from_website' with is_explicitly_listed=true. If fewer "
+        "than 5 are explicitly listed, fill remaining entries as "
+        "source_type='inferred_recommendation' with is_explicitly_listed=false, grounded "
+        "in brand category and content. Never fabricate extracted services.\n\n"
         "Section 5 — target_audience_identification:\n"
         "- Provide primary_audiences, secondary_audiences, industry_segments, "
         "business_types, customer_profiles, geographical_focus, "
